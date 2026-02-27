@@ -149,6 +149,62 @@ export interface FlowRecord {
   action: 'ACCEPT' | 'REJECT';
 }
 
+/* ── Anomaly Detector Types ─────────────────────────── */
+export type AnomalyDetectorCategory =
+  | 'device-health'
+  | 'interface-health'
+  | 'routing'
+  | 'security'
+  | 'discovery'
+  | 'syslog';
+
+export type AnomalyDetectorSeverity = 'critical' | 'major' | 'minor' | 'info';
+
+export interface AnomalyDetectorRule {
+  /** Unique identifier */
+  id: string;
+  /** Human-readable title */
+  title: string;
+  /** What this detector monitors */
+  description: string;
+  /** Logical grouping */
+  category: AnomalyDetectorCategory;
+  /** Default severity when the detector fires */
+  severity: AnomalyDetectorSeverity;
+  /** Whether this detector is enabled by default */
+  enabled: boolean;
+  /** Metric or DQL query powering this detector */
+  query: string;
+  /** Threshold value (numeric) */
+  threshold: number;
+  /** Alert when metric is ABOVE or BELOW the threshold */
+  alertCondition: 'ABOVE' | 'BELOW';
+  /** Sliding window size (number of samples) */
+  slidingWindow: number;
+  /** How many samples must violate threshold to fire */
+  violatingSamples: number;
+  /** How many good samples to de-alert */
+  dealertingSamples: number;
+  /** Event template title pattern */
+  eventTitlePattern: string;
+  /** Event template description pattern */
+  eventDescriptionPattern: string;
+  /** Whether Davis should merge concurrent events */
+  isMergingAllowed: boolean;
+  /** Which network category(ies) this maps to */
+  relatedCategories: NetworkCategoryId[];
+  /** NOC best-practice notes */
+  nocGuidance: string;
+}
+
+/** Runtime status of a detector (for demo/display) */
+export interface AnomalyDetectorStatus {
+  detectorId: string;
+  firingCount: number;
+  lastFired?: Date;
+  status: 'OK' | 'FIRING' | 'DISABLED';
+}
+
 /* ── Demo Alert (same pattern as issue-management-console) ── */
 export interface DemoAlert {
   id: string;

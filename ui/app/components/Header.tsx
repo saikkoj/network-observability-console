@@ -32,6 +32,9 @@ export const Header = () => {
             {cat.icon} {cat.title}
           </AppHeader.NavItem>
         ))}
+        <AppHeader.NavItem as={Link} to="/detectors">
+          🔔 Anomaly Detectors
+        </AppHeader.NavItem>
         <AppHeader.NavItem as={Link} to="/data">
           Explore Data
         </AppHeader.NavItem>

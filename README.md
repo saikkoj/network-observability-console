@@ -49,6 +49,20 @@ Each category includes actionable workflows:
 - **Escalate** — PagerDuty escalation to L2/L3
 - Category-specific actions: Auto-Remediate, Capacity Report, Root Cause Analysis, Traffic Reroute
 
+### Davis Anomaly Detectors
+18 curated, generic Davis anomaly detection rules across 6 categories — derived from real-world production configurations with no vendor-specific or customer-specific data.
+
+| Category | Count | Examples |
+|---|---|---|
+| **Device Health** | 5 | CPU > 80%, Memory > 85%, Device Unavailable, PSU, Temperature |
+| **Interface Health** | 6 | Interface Down, Admin Down, Flapping, Utilization > 50%, CRC Errors, Discards |
+| **Routing** | 2 | BGP Peer State, EIGRP Response Time |
+| **Security** | 1 | Authentication Failures |
+| **Discovery** | 1 | New Device Detected |
+| **Syslog** | 3 | Severity Alert, Duplicate Address, Err-Disabled |
+
+Each detector shows threshold config, DQL query, event templates, and NOC guidance. Filter by category or severity.
+
 ### Demo / Live Mode
 Toggle between demo data (pre-populated mock data) and live DQL queries. Demo mode is useful for showcasing the app without a connected environment.
 
@@ -84,6 +98,7 @@ network-observability-console/
 │       │   └── network.ts       # Core TypeScript types
 │       ├── data/
 │       │   ├── networkCategories.ts  # Category config + DQL queries
+│       │   ├── anomalyDetectors.ts   # 18 Davis anomaly detector rules + metadata
 │       │   └── demoData.ts           # Mock data for demo mode
 │       ├── hooks/
 │       │   ├── useDemoMode.tsx       # Demo/live toggle context
@@ -108,6 +123,7 @@ network-observability-console/
 │           ├── Devices.tsx           # Device inventory
 │           ├── Interfaces.tsx        # Interface health
 │           ├── FlowAnalytics.tsx     # AWS VPC flow analytics
+│           ├── AnomalyDetectors.tsx  # Davis anomaly detector catalog
 │           ├── CategoryDetail.tsx    # Per-category detail view
 │           └── Data.tsx              # DQL explorer
 ```
@@ -123,6 +139,7 @@ network-observability-console/
 | `/devices` | Device Inventory |
 | `/interfaces` | Interface Health |
 | `/flows` | Flow Analytics |
+| `/detectors` | Anomaly Detectors |
 | `/category/:categoryId` | Category Detail |
 | `/data` | DQL Explorer |
 
