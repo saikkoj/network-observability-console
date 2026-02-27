@@ -9,6 +9,7 @@ import { useDemoMode } from '../hooks/useDemoMode';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
+import { modeBadgeStyle } from '../utils';
 
 /* ── Demo flow data ───────────────────────────────── */
 const DEMO_FLOW_TIMESERIES = [
@@ -139,19 +140,7 @@ export const FlowAnalytics = () => {
       <Flex alignItems="center" justifyContent="space-between">
         <Flex alignItems="center" gap={12}>
           <Heading level={3} style={{ margin: 0 }}>☁️ Cloud Network Flow Analytics</Heading>
-          <span
-            style={{
-              padding: '3px 10px',
-              borderRadius: 10,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.5px',
-              background: demoMode
-                ? 'rgba(99, 102, 241, 0.15)'
-                : 'rgba(42, 176, 111, 0.15)',
-              color: demoMode ? '#818cf8' : '#2ab06f',
-            }}
-          >
+          <span style={modeBadgeStyle(demoMode)}>
             {demoMode ? 'DEMO' : 'LIVE'}
           </span>
         </Flex>

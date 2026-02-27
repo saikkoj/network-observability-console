@@ -15,7 +15,8 @@ import { NETWORK_CATEGORIES } from '../data/networkCategories';
 import { AlertList } from '../components/AlertList';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_ALERTS, DEMO_KPI, DEMO_KPI_WEEK_AGO, DEMO_SECONDARY_KPI, DEMO_SECONDARY_KPI_WEEK_AGO, DEMO_CHART_DATA } from '../data/demoData';
-import type { NetworkCategoryId, ThresholdRule } from '../types/network';
+import type { NetworkCategoryId } from '../types/network';
+import { computeSeverity, toNum, formatKpiValue, SEV_COLORS } from '../utils';
 
 /* Map category ID → DQL filter value */
 const CATEGORY_EVENT_MAP: Record<string, string> = {
@@ -26,41 +27,7 @@ const CATEGORY_EVENT_MAP: Record<string, string> = {
   global: '',
 };
 
-/* ── Severity evaluator ─────────────────────────────── */
-function computeSeverity(
-  value: number,
-  thresholds: ThresholdRule[],
-): 'critical' | 'warning' | 'healthy' {
-  for (const t of thresholds) {
-    const v = Number(t.value);
-    const match =
-      (t.comparator === '==' && value === v) ||
-      (t.comparator === '<' && value < v) ||
-      (t.comparator === '<=' && value <= v) ||
-      (t.comparator === '>' && value > v) ||
-      (t.comparator === '>=' && value >= v);
-    if (match) {
-      return t.color === 'red' ? 'critical' : t.color === 'amber' ? 'warning' : 'healthy';
-    }
-  }
-  return 'healthy';
-}
-
-const SEV_COLOR = { critical: '#dc172a', warning: '#fd8232', healthy: '#2ab06f' };
-
-function toNum(v: unknown): number {
-  if (typeof v === 'number') return v;
-  if (typeof v === 'bigint') return Number(v);
-  return Number(v) || 0;
-}
-
-function formatNs(ns: number): string {
-  const mins = Math.round(ns / 60_000_000_000);
-  if (mins < 1) return `${Math.round(ns / 1_000_000_000)}s`;
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  return `${hrs}h ${mins % 60}m`;
-}
+const SEV_COLOR = SEV_COLORS;
 
 export const CategoryDetail = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -71,9 +38,10 @@ export const CategoryDetail = () => {
   /* Filter alerts for this category */
   const eventCategory = CATEGORY_EVENT_MAP[categoryId ?? ''] ?? '';
   const filteredAlerts = useMemo(() => {
-    if (!eventCategory) return DEMO_ALERTS;
-    return DEMO_ALERTS.filter(a => a.category === eventCategory);
-  }, [eventCategory]);
+    const alerts = demoMode ? DEMO_ALERTS : [];
+    if (!eventCategory) return alerts;
+    return alerts.filter(a => a.category === eventCategory);
+  }, [eventCategory, demoMode]);
 
   /* Live KPI */
   const kpiResult = useDql(
@@ -205,12 +173,12 @@ export const CategoryDetail = () => {
                   </Paragraph>
                   <span style={{ fontSize: 36, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                     {demoMode
-                      ? formatNs(toNum(DEMO_SECONDARY_KPI[catId]?.[category.secondaryKpi.fieldName]))
+                      ? formatKpiValue(toNum(DEMO_SECONDARY_KPI[catId]?.[category.secondaryKpi.fieldName]), category.secondaryKpi.unit)
                       : '—'}
                   </span>
                   <span style={{ fontSize: 12, opacity: 0.6 }}>
                     week ago: {demoMode
-                      ? formatNs(toNum(DEMO_SECONDARY_KPI_WEEK_AGO[catId]?.[category.secondaryKpi.fieldName]))
+                      ? formatKpiValue(toNum(DEMO_SECONDARY_KPI_WEEK_AGO[catId]?.[category.secondaryKpi.fieldName]), category.secondaryKpi.unit)
                       : '—'}
                   </span>
                 </Flex>

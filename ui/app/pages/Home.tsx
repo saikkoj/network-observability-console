@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { TimeseriesChart } from '@dynatrace/strato-components-preview/charts';
@@ -12,34 +13,10 @@ import { AlertList } from '../components/AlertList';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_KPI, DEMO_CHART_DATA } from '../data/demoData';
-import type { ThresholdRule } from '../types/network';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
-
-/* ── Evaluate threshold → severity ─────────────────── */
-function computeSeverity(
-  value: number,
-  thresholds: ThresholdRule[],
-): 'critical' | 'warning' | 'healthy' {
-  for (const t of thresholds) {
-    const v = Number(t.value);
-    const match =
-      (t.comparator === '==' && value === v) ||
-      (t.comparator === '<' && value < v) ||
-      (t.comparator === '<=' && value <= v) ||
-      (t.comparator === '>' && value > v) ||
-      (t.comparator === '>=' && value >= v);
-    if (match) {
-      return t.color === 'red'
-        ? 'critical'
-        : t.color === 'amber'
-          ? 'warning'
-          : 'healthy';
-    }
-  }
-  return 'healthy';
-}
+import { computeSeverity, toNum, modeBadgeStyle } from '../utils';
 
 /* ── Pulse keyframe for critical ──────────────────── */
 const pulseKeyframes = `
@@ -55,9 +32,34 @@ export const Home = () => {
   const allCategories = NETWORK_CATEGORIES;
   const specificCategories = NETWORK_CATEGORIES.filter((c) => c.id !== 'global');
 
-  /* ── Status bar data ──── */
+  /* ── Status bar data: use live KPI results per category ──── */
+  const reachResult = useDql(
+    { query: specificCategories.find(c => c.id === 'reachability')?.kpi.dqlQuery ?? '' },
+    { enabled: !demoMode },
+  );
+  const satResult = useDql(
+    { query: specificCategories.find(c => c.id === 'saturation')?.kpi.dqlQuery ?? '' },
+    { enabled: !demoMode },
+  );
+  const errResult = useDql(
+    { query: specificCategories.find(c => c.id === 'errors')?.kpi.dqlQuery ?? '' },
+    { enabled: !demoMode },
+  );
+  const traffResult = useDql(
+    { query: specificCategories.find(c => c.id === 'traffic')?.kpi.dqlQuery ?? '' },
+    { enabled: !demoMode },
+  );
+  const liveKpiResults: Record<string, ReturnType<typeof useDql>> = {
+    reachability: reachResult,
+    saturation: satResult,
+    errors: errResult,
+    traffic: traffResult,
+  };
+
   const categoryStatusItems: StatusCategory[] = specificCategories.map((cat) => {
-    const count = demoMode ? (DEMO_KPI[cat.id]?.[cat.kpi.fieldName] ?? 0) : 0;
+    const count = demoMode
+      ? (DEMO_KPI[cat.id]?.[cat.kpi.fieldName] ?? 0)
+      : toNum((liveKpiResults[cat.id]?.data?.records?.[0] as Record<string, unknown>)?.[cat.kpi.fieldName]);
     return {
       icon: cat.icon,
       label: cat.title,
@@ -66,7 +68,13 @@ export const Home = () => {
     };
   });
 
-  const totalAlerts = demoMode ? (DEMO_KPI['global']?.totalProblems ?? 0) : 0;
+  const globalResult = useDql(
+    { query: globalCategory.kpi.dqlQuery },
+    { enabled: !demoMode },
+  );
+  const totalAlerts = demoMode
+    ? (DEMO_KPI['global']?.totalProblems ?? 0)
+    : toNum((globalResult.data?.records?.[0] as Record<string, unknown>)?.totalProblems);
   const criticalCount = categoryStatusItems.filter((c) => c.severity === 'critical').length;
   const warningCount = categoryStatusItems.filter((c) => c.severity === 'warning').length;
   const healthyCount = categoryStatusItems.filter((c) => c.severity === 'healthy').length;
@@ -103,19 +111,7 @@ export const Home = () => {
             <Heading level={3} style={{ margin: 0 }}>
               🌐 NOC — Network Observability Console
             </Heading>
-            <span
-              style={{
-                padding: '3px 10px',
-                borderRadius: 10,
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: '0.5px',
-                background: demoMode
-                  ? 'rgba(99, 102, 241, 0.15)'
-                  : 'rgba(42, 176, 111, 0.15)',
-                color: demoMode ? '#818cf8' : '#2ab06f',
-              }}
-            >
+            <span style={modeBadgeStyle(demoMode)}>
               {demoMode ? 'DEMO' : 'LIVE'}
             </span>
           </Flex>
@@ -168,12 +164,12 @@ export const Home = () => {
                 <span style={{ fontSize: 14 }}>🗺️</span>
                 <Heading level={5} style={{ margin: 0 }}>Network Topology</Heading>
               </Flex>
-              <a
-                href="/ui/apps/my.network.observability.console/topology"
+              <Link
+                to="/topology"
                 style={{ fontSize: 11, color: '#73b1ff', textDecoration: 'none' }}
               >
                 View full map →
-              </a>
+              </Link>
             </Flex>
             <TopologyMap height={260} mini />
           </Flex>

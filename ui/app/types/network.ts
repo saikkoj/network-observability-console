@@ -15,7 +15,7 @@ export type NetworkCategoryId =
 
 /* ── Threshold Rules ────────────────────────────────── */
 export interface ThresholdRule {
-  comparator: string;       // shorthand: '>=', '<', '==', etc.
+  comparator: '==' | '<' | '<=' | '>' | '>=';
   value: number | string;
   color: 'green' | 'amber' | 'red';
 }

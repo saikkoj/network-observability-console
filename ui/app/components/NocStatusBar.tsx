@@ -4,6 +4,7 @@ import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
+import { SEV_COLORS } from '../utils';
 
 export interface StatusCategory {
   icon: string;
@@ -19,12 +20,6 @@ interface NocStatusBarProps {
   healthyCount: number;
   categories: StatusCategory[];
 }
-
-const SEV_COLORS = {
-  critical: '#dc172a',
-  warning: '#f5d30f',
-  healthy: '#2ab06f',
-};
 
 export const NocStatusBar = ({
   totalAlerts,

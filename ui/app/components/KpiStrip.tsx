@@ -6,40 +6,11 @@ import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 
-import type { NetworkCategory, ThresholdRule } from '../types/network';
+import type { NetworkCategory } from '../types/network';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_KPI, DEMO_SECONDARY_KPI } from '../data/demoData';
 import { useDql } from '@dynatrace-sdk/react-hooks';
-
-/* ── Severity evaluation ───────────────────────────── */
-function evaluateSeverity(value: number | undefined, thresholds: ThresholdRule[]): 'critical' | 'warning' | 'healthy' {
-  if (value == null) return 'healthy';
-  for (const t of thresholds) {
-    const v = Number(t.value);
-    const match =
-      (t.comparator === '==' && value === v) ||
-      (t.comparator === '<' && value < v) ||
-      (t.comparator === '<=' && value <= v) ||
-      (t.comparator === '>' && value > v) ||
-      (t.comparator === '>=' && value >= v);
-    if (match) {
-      return t.color === 'red' ? 'critical' : t.color === 'amber' ? 'warning' : 'healthy';
-    }
-  }
-  return 'healthy';
-}
-
-const SEV_COLORS = {
-  critical: '#dc172a',
-  warning:  '#f5d30f',
-  healthy:  '#2ab06f',
-};
-
-function toNum(v: unknown): number | undefined {
-  if (v == null) return undefined;
-  const n = Number(v);
-  return isNaN(n) ? undefined : n;
-}
+import { computeSeverity, toNum, SEV_COLORS } from '../utils';
 
 /* ── Single mini card ──────────────────────────────── */
 const KpiMiniCard = ({ category }: { category: NetworkCategory }) => {
@@ -65,7 +36,7 @@ const KpiMiniCard = ({ category }: { category: NetworkCategory }) => {
       : toNum((secResult.data?.records?.[0] as Record<string, unknown>)?.[secKpi.fieldName])
     : undefined;
 
-  const severity = evaluateSeverity(nowValue, category.kpi.thresholds);
+  const severity = computeSeverity(nowValue, category.kpi.thresholds);
   const sevColor = SEV_COLORS[severity];
 
   const formatValue = (val: number | undefined, unit?: string): string => {

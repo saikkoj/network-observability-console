@@ -7,6 +7,13 @@ import { CheckmarkIcon, CriticalIcon } from '@dynatrace/strato-icons';
 import { useWorkflowTrigger } from '../hooks/useWorkflowTrigger';
 import type { NetworkAction } from '../types/network';
 
+const spinKeyframes = `
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+`;
+
 interface ActionModalProps {
   show: boolean;
   onDismiss: () => void;
@@ -43,7 +50,9 @@ export const ActionModal = ({ show, onDismiss, action }: ActionModalProps) => {
     );
 
   return (
-    <Modal show={show} onDismiss={handleClose} title={`${action.icon} ${action.label}`} size="small" footer={footer}>
+    <>
+      <style>{spinKeyframes}</style>
+      <Modal show={show} onDismiss={handleClose} title={`${action.icon} ${action.label}`} size="small" footer={footer}>
       {!confirmed && <Paragraph>{action.confirmMessage}</Paragraph>}
 
       {status === 'loading' && (
@@ -67,5 +76,6 @@ export const ActionModal = ({ show, onDismiss, action }: ActionModalProps) => {
         </Flex>
       )}
     </Modal>
+    </>
   );
 };
