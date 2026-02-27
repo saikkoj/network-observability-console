@@ -1,0 +1,18 @@
+{
+  "environmentUrl": "https://bnk46244.apps.dynatrace.com/",
+  "app": {
+    "name": "Network Observability Console",
+    "version": "1.0.0",
+    "description": "NOC network observability — device health, topology, traffic",
+    "id": "my.network.observability.console",
+    "scopes": [
+      { "name": "storage:logs:read", "comment": "required for VPC flow log queries" },
+      { "name": "storage:buckets:read", "comment": "default template" },
+      { "name": "storage:events:read", "comment": "required for dt.davis.problems queries" },
+      { "name": "storage:bizevents:read", "comment": "required for bizevent queries" },
+      { "name": "environment-api:problems:read", "comment": "required for problems API access" },
+      { "name": "environment-api:entities:read", "comment": "required for dt.entity.network:device queries" },
+      { "name": "environment-api:metrics:read", "comment": "required for network device metric queries" }
+    ]
+  }
+}
