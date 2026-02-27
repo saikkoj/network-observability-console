@@ -6,8 +6,6 @@ import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 
 import type { TopologyNode, TopologyEdge } from '../types/network';
-import { useDemoMode } from '../hooks/useDemoMode';
-import { DEMO_TOPOLOGY_NODES, DEMO_TOPOLOGY_EDGES } from '../data/demoData';
 
 /* ── Colour helpers ───────────────────────────────── */
 const HEALTH_COLOR: Record<string, string> = {
@@ -32,6 +30,10 @@ function edgeWidth(utilization: number): number {
 /* ── Node shape renderer ──────────────────────────── */
 const NODE_SIZE = 36;
 
+/** Hit-area size — slightly larger than the visible shape so hover is forgiving */
+const HIT_PAD = 6;
+const HIT_SIZE = NODE_SIZE + HIT_PAD * 2;
+
 function renderNodeShape(
   node: TopologyNode,
   isHovered: boolean,
@@ -44,13 +46,7 @@ function renderNodeShape(
   const scale = isHovered ? 1.12 : 1;
   const transform = `translate(${node.x}, ${node.y}) scale(${scale})`;
 
-  const common = {
-    onMouseEnter,
-    onMouseLeave,
-    style: { cursor: 'pointer', transition: 'all 0.15s ease' } as React.CSSProperties,
-  };
-
-  // Label
+  // Label below the shape
   const label = (
     <text
       textAnchor="middle"
@@ -65,15 +61,36 @@ function renderNodeShape(
     </text>
   );
 
+  // Invisible hit-area rect covers shape + label — events go on the <g>
+  const hitArea = (
+    <rect
+      x={-HIT_SIZE / 2}
+      y={-HIT_SIZE / 2}
+      width={HIT_SIZE}
+      height={HIT_SIZE + 20 /* include label */}
+      fill="transparent"
+      stroke="none"
+    />
+  );
+
+  const gProps = {
+    key: node.id,
+    transform,
+    onMouseEnter,
+    onMouseLeave,
+    style: { cursor: 'pointer', transition: 'all 0.15s ease' } as React.CSSProperties,
+  };
+
   switch (node.role) {
     case 'router':
     case 'cloud-gw':
       return (
-        <g key={node.id} transform={transform}>
+        <g {...gProps}>
+          {hitArea}
           <circle
             cx={0} cy={0} r={NODE_SIZE / 2}
             fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            {...common}
+            pointerEvents="none"
           />
           <text textAnchor="middle" dy={4} fill="#fff" fontSize={16} pointerEvents="none">
             {node.role === 'cloud-gw' ? '☁' : '⬡'}
@@ -83,12 +100,13 @@ function renderNodeShape(
       );
     case 'firewall':
       return (
-        <g key={node.id} transform={transform}>
+        <g {...gProps}>
+          {hitArea}
           <rect
             x={-NODE_SIZE / 2} y={-NODE_SIZE / 2}
             width={NODE_SIZE} height={NODE_SIZE} rx={4}
             fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            {...common}
+            pointerEvents="none"
           />
           <text textAnchor="middle" dy={4} fill="#fff" fontSize={16} pointerEvents="none">
             🛡
@@ -98,11 +116,12 @@ function renderNodeShape(
       );
     case 'switch':
       return (
-        <g key={node.id} transform={transform}>
+        <g {...gProps}>
+          {hitArea}
           <polygon
             points={`0,${-NODE_SIZE / 2} ${NODE_SIZE / 2},0 0,${NODE_SIZE / 2} ${-NODE_SIZE / 2},0`}
             fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            {...common}
+            pointerEvents="none"
           />
           <text textAnchor="middle" dy={4} fill="#fff" fontSize={14} pointerEvents="none">
             ⬢
@@ -113,12 +132,13 @@ function renderNodeShape(
     case 'server':
     default:
       return (
-        <g key={node.id} transform={transform}>
+        <g {...gProps}>
+          {hitArea}
           <rect
             x={-NODE_SIZE / 2} y={-NODE_SIZE / 2}
             width={NODE_SIZE} height={NODE_SIZE} rx={8}
             fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            {...common}
+            pointerEvents="none"
           />
           <text textAnchor="middle" dy={4} fill="#fff" fontSize={14} pointerEvents="none">
             🖥
@@ -129,24 +149,49 @@ function renderNodeShape(
   }
 }
 
-/* ── Tooltip ──────────────────────────────────────── */
+/* ── Tooltip (viewport-clamped, fixed position) ──── */
+const TIP_W = 200;
+const TIP_H_EST = 160; // estimated max height
+const TIP_GAP = 14;
+
 function Tooltip({ node, x, y }: { node: TopologyNode; x: number; y: number }) {
+  // Clamp so the tooltip never overflows the viewport edge
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+  let left = x + TIP_GAP;
+  let top = y - 8;
+
+  // Flip horizontally if too close to right edge
+  if (left + TIP_W > vw - 8) {
+    left = x - TIP_W - TIP_GAP;
+  }
+  // Flip vertically if too close to bottom
+  if (top + TIP_H_EST > vh - 8) {
+    top = vh - TIP_H_EST - 8;
+  }
+  // Never above viewport
+  if (top < 8) top = 8;
+  // Never left of viewport
+  if (left < 8) left = 8;
+
   return (
     <div
       style={{
-        position: 'absolute',
-        left: x + 12,
-        top: y - 8,
-        background: 'rgba(15,17,22,0.94)',
-        border: '1px solid rgba(255,255,255,0.12)',
+        position: 'fixed',
+        left,
+        top,
+        background: 'rgba(15,17,22,0.96)',
+        border: '1px solid rgba(255,255,255,0.14)',
         borderRadius: 8,
         padding: '10px 14px',
-        zIndex: 999,
+        zIndex: 99999,
         fontSize: 12,
         lineHeight: 1.6,
         pointerEvents: 'none',
-        minWidth: 180,
-        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+        minWidth: TIP_W,
+        maxWidth: 280,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         color: '#fff',
       }}
     >
@@ -163,16 +208,15 @@ function Tooltip({ node, x, y }: { node: TopologyNode; x: number; y: number }) {
 
 /* ── Main TopologyMap ─────────────────────────────── */
 interface TopologyMapProps {
-  nodes?: TopologyNode[];
-  edges?: TopologyEdge[];
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
   height?: number;
   mini?: boolean;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
-export const TopologyMap = ({ nodes: propNodes, edges: propEdges, height = 500, mini = false }: TopologyMapProps) => {
-  const { demoMode } = useDemoMode();
-  const nodes = propNodes ?? (demoMode ? DEMO_TOPOLOGY_NODES : []);
-  const edges = propEdges ?? (demoMode ? DEMO_TOPOLOGY_EDGES : []);
+export const TopologyMap = ({ nodes, edges, height = 500, mini = false, isLoading = false, error = null }: TopologyMapProps) => {
 
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -203,6 +247,22 @@ export const TopologyMap = ({ nodes: propNodes, edges: propEdges, height = 500, 
 
   const hoveredNodeData = hoveredNode ? nodeById[hoveredNode] : null;
 
+  if (isLoading) {
+    return (
+      <Flex alignItems="center" justifyContent="center" style={{ height, opacity: 0.5 }}>
+        <Paragraph>Loading topology…</Paragraph>
+      </Flex>
+    );
+  }
+
+  if (error) {
+    return (
+      <Flex alignItems="center" justifyContent="center" style={{ height, opacity: 0.5 }}>
+        <Paragraph>Topology error: {error}</Paragraph>
+      </Flex>
+    );
+  }
+
   if (nodes.length === 0) {
     return (
       <Flex alignItems="center" justifyContent="center" style={{ height, opacity: 0.5 }}>
@@ -212,6 +272,7 @@ export const TopologyMap = ({ nodes: propNodes, edges: propEdges, height = 500, 
   }
 
   return (
+    <>
     <div
       style={{
         position: 'relative',
@@ -299,11 +360,12 @@ export const TopologyMap = ({ nodes: propNodes, edges: propEdges, height = 500, 
           )
         )}
       </svg>
-
-      {/* Tooltip portal */}
-      {!mini && hoveredNodeData && (
-        <Tooltip node={hoveredNodeData} x={tooltipPos.x} y={tooltipPos.y} />
-      )}
     </div>
+
+    {/* Tooltip rendered outside the overflow:hidden container */}
+    {!mini && hoveredNodeData && (
+      <Tooltip node={hoveredNodeData} x={tooltipPos.x} y={tooltipPos.y} />
+    )}
+    </>
   );
 };

@@ -3,6 +3,7 @@ import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
+import { useTopologyData } from '../hooks/useTopologyData';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
@@ -10,6 +11,7 @@ import { modeBadgeStyle } from '../utils';
 
 export const Topology = () => {
   const { demoMode } = useDemoMode();
+  const { nodes, edges, isLoading, error } = useTopologyData(960, 600);
 
   return (
     <Flex flexDirection="column" padding={24} gap={20}>
@@ -23,11 +25,12 @@ export const Topology = () => {
         </Flex>
         <Paragraph style={{ fontSize: 11, opacity: 0.5 }}>
           Interactive topology — hover nodes for details
+          {!demoMode && nodes.length > 0 && ` • ${nodes.length} devices`}
         </Paragraph>
       </Flex>
 
       {/* Full topology map */}
-      <TopologyMap height={600} />
+      <TopologyMap nodes={nodes} edges={edges} height={600} isLoading={isLoading} error={error} />
 
       {/* Utilization legend */}
       <Flex

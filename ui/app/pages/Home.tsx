@@ -11,6 +11,7 @@ import { KpiStrip } from '../components/KpiStrip';
 import { NocActionBar } from '../components/NocActionBar';
 import { AlertList } from '../components/AlertList';
 import { TopologyMap } from '../components/TopologyMap';
+import { useTopologyData } from '../hooks/useTopologyData';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_KPI, DEMO_CHART_DATA } from '../data/demoData';
 import Colors from '@dynatrace/strato-design-tokens/colors';
@@ -78,6 +79,9 @@ export const Home = () => {
   const criticalCount = categoryStatusItems.filter((c) => c.severity === 'critical').length;
   const warningCount = categoryStatusItems.filter((c) => c.severity === 'warning').length;
   const healthyCount = categoryStatusItems.filter((c) => c.severity === 'healthy').length;
+
+  /* ── Topology data ──── */
+  const { nodes: topoNodes, edges: topoEdges, isLoading: topoLoading, error: topoError } = useTopologyData(440, 260);
 
   /* ── Global trend chart ──── */
   const chartResult = useDql(
@@ -171,7 +175,7 @@ export const Home = () => {
                 View full map →
               </Link>
             </Flex>
-            <TopologyMap height={260} mini />
+            <TopologyMap nodes={topoNodes} edges={topoEdges} height={260} mini isLoading={topoLoading} error={topoError} />
           </Flex>
 
           {/* Trend chart */}
