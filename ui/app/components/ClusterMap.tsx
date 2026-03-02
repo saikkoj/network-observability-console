@@ -5,7 +5,7 @@
  * colored by health status. Uses color="legend" + valueAccessor to tie BubbleLayer
  * to CategoricalLegend (matching the documented strato-geo pattern).
  */
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { MapView, BubbleLayer, CategoricalLegend } from '@dynatrace/strato-geo';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
@@ -82,6 +82,32 @@ export const ClusterMap = ({
   viewState,
   hideLegend = false,
 }: ClusterMapProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
+
+  /*
+   * Deferred mount: MapView (maplibre-gl) must not initialize until the
+   * container has a resolved, non-zero width.  If it starts before CSS flex
+   * layout is complete the internal canvas is created at 0×0 and never
+   * resizes.  We measure on mount + on a short delay, then flip `ready`.
+   */
+  useEffect(() => {
+    const check = () => {
+      const el = containerRef.current;
+      if (el && el.offsetWidth > 0) {
+        setReady(true);
+        return true;
+      }
+      return false;
+    };
+    if (check()) return;
+    /* retry a few times to cover flex layout settling */
+    const t1 = setTimeout(check, 50);
+    const t2 = setTimeout(check, 200);
+    const t3 = setTimeout(check, 500);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
   /* Transform cluster data into BubbleLayer data points */
   const bubbleData = useMemo<ClusterBubble[]>(
     () =>
@@ -121,6 +147,7 @@ export const ClusterMap = ({
 
   return (
     <div
+      ref={containerRef}
       style={{
         borderRadius: mini
           ? `0 0 ${Borders.Radius.Container.Default} ${Borders.Radius.Container.Default}`
@@ -130,9 +157,11 @@ export const ClusterMap = ({
         overflow: 'hidden',
         position: 'relative',
         width: '100%',
+        height: typeof height === 'number' ? height : undefined,
       }}
     >
-      <MapView height={height} initialViewState={resolvedViewState}>
+      {ready && (
+        <MapView height={height} initialViewState={resolvedViewState}>
         {bubbleData.length > 0 && (
           <BubbleLayer
             data={bubbleData}
@@ -222,7 +251,8 @@ export const ClusterMap = ({
         {!mini && !hideLegend && (
           <CategoricalLegend colorPalette={LEGEND_PALETTE} position="bottom" />
         )}
-      </MapView>
+        </MapView>
+      )}
     </div>
   );
 };
