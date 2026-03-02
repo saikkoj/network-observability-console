@@ -2,7 +2,7 @@
   "environmentUrl": "https://bnk46244.apps.dynatrace.com/",
   "app": {
     "name": "Network Observability Console",
-    "version": "1.4.4",
+    "version": "1.4.5",
     "description": "NOC network observability — device health, topology, traffic",
     "id": "my.network.observability.console",
     "scopes": [

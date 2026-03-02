@@ -47,6 +47,7 @@ export const NocStatusBar = ({
         borderRadius: Borders.Radius.Container.Default,
         border: `1px solid ${Colors.Border.Neutral.Default}`,
         boxShadow: BoxShadows.Surface.Raised.Rest,
+        overflow: 'hidden',
       }}
     >
       {/* Total alerts */}

@@ -108,7 +108,7 @@ export const Home = () => {
     <>
       <style>{pulseKeyframes}</style>
 
-      <Flex flexDirection="column" padding={24} gap={20}>
+      <Flex flexDirection="column" padding={24} gap={20} style={{ overflow: 'hidden' }}>
         {/* ── NOC Header ──────────────────── */}
         <Flex alignItems="center" justifyContent="space-between">
           <Flex alignItems="center" gap={12}>
@@ -149,11 +149,11 @@ export const Home = () => {
         <NocActionBar />
 
         {/* ── 4. Topology Mini-Map + Trend side-by-side ── */}
-        <Flex gap={16} alignItems="stretch">
+        <Flex gap={16} alignItems="stretch" style={{ overflow: 'hidden' }}>
           {/* Mini topology — fixed-height container to prevent layout jitter */}
           <Flex
             flexDirection="column"
-            style={{ flex: 1, minWidth: 0, minHeight: 300 }}
+            style={{ flex: 1, minWidth: 200, minHeight: 300, overflow: 'hidden', contain: 'layout' }}
           >
             <Flex
               alignItems="center"
@@ -185,7 +185,7 @@ export const Home = () => {
             flexDirection="column"
             style={{
               flex: 1,
-              minWidth: 0,
+              minWidth: 200,
               background: Colors.Background.Surface.Default,
               borderRadius: Borders.Radius.Container.Default,
               border: `1px solid ${Colors.Border.Neutral.Default}`,

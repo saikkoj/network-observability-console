@@ -49,7 +49,7 @@ const KpiMiniCard = ({ category }: { category: NetworkCategory }) => {
   return (
     <Link
       to={`/category/${category.id}`}
-      style={{ textDecoration: 'none', color: 'inherit', flex: '1 1 0', minWidth: 0 }}
+      style={{ textDecoration: 'none', color: 'inherit', flex: '1 1 160px', minWidth: 140 }}
     >
       <Flex
         flexDirection="column"
@@ -104,7 +104,7 @@ interface KpiStripProps {
 
 export const KpiStrip = ({ categories }: KpiStripProps) => {
   return (
-    <Flex flexDirection="row" gap={12} flexWrap="nowrap" alignItems="stretch">
+    <Flex flexDirection="row" gap={12} flexWrap="wrap" alignItems="stretch" style={{ overflow: 'hidden' }}>
       {categories.map(cat => (
         <KpiMiniCard key={cat.id} category={cat} />
       ))}

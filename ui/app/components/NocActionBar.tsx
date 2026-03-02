@@ -60,9 +60,11 @@ export const NocActionBar = () => {
         <Flex
           alignItems="center"
           gap={8}
+          flexWrap="wrap"
           style={{
             padding: '10px 20px',
             borderBottom: showMore ? `1px solid ${Colors.Border.Neutral.Default}` : 'none',
+            overflow: 'hidden',
           }}
         >
           <Flex alignItems="center" gap={8} style={{ marginRight: 8 }}>
@@ -96,9 +98,11 @@ export const NocActionBar = () => {
           <Flex
             alignItems="center"
             gap={8}
+            flexWrap="wrap"
             style={{
               padding: '8px 20px',
               background: 'rgba(0,0,0,0.02)',
+              overflow: 'hidden',
             }}
           >
             <Paragraph style={{ fontSize: 10, opacity: 0.5, marginRight: 4, whiteSpace: 'nowrap' }}>
