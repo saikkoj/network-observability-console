@@ -658,37 +658,48 @@ export const NETWORK_QUERIES = {
     `| limit 100`,
   ].join('\n'),
 
-  /** VPC flow analytics — inter-VPC traffic */
+  /**
+   * VPC flow analytics — top 5 origin VPC traffic timeseries.
+   * Fields are pre-parsed by Dynatrace AWS log ingest — no parse content needed.
+   * Available fields: aws.log_group, action, flow_direction, log_status,
+   *   bytes, pkt_srcaddr, pkt_dstaddr, srcport, dstport, vpc_id, tgw_id,
+   *   traffic_path, az_id, aws.region, cloud.region, packets, packets_lost_*
+   * NOTE: FlowAnalytics.tsx builds dynamic queries with user-selected filters.
+   */
   vpcFlowTraffic: [
     `fetch logs`,
-    `| filter matchesValue(aws.log_group, "*vpc*") and matchesValue(aws.log_group, "*flow-logs*")`,
-    `| parse content, "LD:version SP LD:accountId SP LD:interfaceId SP LD:sourceAddress SP LD:destinationAddress SP LD:sourcePort SP LD:destinationPort SP LD:protocol SP LD:packets SP LD:bytes SP LD:startTimestamp SP LD:endTimestamp SP LD:action SP LD:logStatus SP LD:vpcId SP LD:subnetId SP LD:instanceId SP LD:tcpFlags SP LD:flowType SP LD:pktSrcAddr SP LD:pktDstAddr SP LD:region SP LD:azId SP LD:subLocationType SP LD:subLocationId SP LD:pktSrcAwsService SP LD:pktDstAwsService SP LD:flowDirection SP LD:trafficPath SP LD:ecsClusterId SP LD:ecsClusterName SP LD:ecsServiceName"`,
+    `| filter matchesValue(aws.log_group, "*flow-logs*")`,
     `| filter action == "ACCEPT"`,
-    `| summarize totalBytes=sum(toLong(bytes)), totalPackets=sum(toLong(packets)), by:{vpcId}`,
-    `| sort totalBytes desc`,
-    `| limit 20`,
+    `| filter log_status == "OK"`,
+    `| makeTimeseries Traffic = sum(toLong(bytes)), by:{vpc_id}`,
+    `| fieldsRename \`Origin VPC\` = vpc_id`,
+    `| sort arraySum(Traffic) desc`,
+    `| limit 5`,
   ].join('\n'),
 
-  /** VPC flow — top endpoint pairs */
+  /** VPC flow — top endpoint pairs (bidirectional, deduplicated) */
   vpcTopEndpoints: [
     `fetch logs`,
-    `| filter matchesValue(aws.log_group, "*vpc*") and matchesValue(aws.log_group, "*flow-logs*")`,
-    `| parse content, "LD:version SP LD:accountId SP LD:interfaceId SP LD:sourceAddress SP LD:destinationAddress SP LD:sourcePort SP LD:destinationPort SP LD:protocol SP LD:packets SP LD:bytes SP LD:startTimestamp SP LD:endTimestamp SP LD:action SP LD:logStatus SP LD:vpcId SP LD:subnetId SP LD:instanceId SP LD:tcpFlags SP LD:flowType SP LD:pktSrcAddr SP LD:pktDstAddr SP LD:region SP LD:azId SP LD:subLocationType SP LD:subLocationId SP LD:pktSrcAwsService SP LD:pktDstAwsService SP LD:flowDirection SP LD:trafficPath SP LD:ecsClusterId SP LD:ecsClusterName SP LD:ecsServiceName"`,
+    `| filter matchesValue(aws.log_group, "*flow-logs*")`,
     `| filter action == "ACCEPT"`,
-    `| summarize totalBytes=sum(toLong(bytes)), by:{sourceAddress, destinationAddress}`,
-    `| sort totalBytes desc`,
-    `| limit 20`,
+    `| filter log_status == "OK"`,
+    `| fieldsAdd pair = if(pkt_srcaddr <= pkt_dstaddr, concat(pkt_srcaddr, " ⇄ ", pkt_dstaddr), else: concat(pkt_dstaddr, " ⇄ ", pkt_srcaddr))`,
+    `| summarize Traffic = sum(toLong(bytes)), by:{pair, vpc_id}`,
+    `| fieldsRename \`Endpoint pair\` = pair, \`Origin VPC\` = vpc_id`,
+    `| sort Traffic desc`,
+    `| limit 100`,
   ].join('\n'),
 
-  /** VPC flow — top ports */
+  /** VPC flow — top destination ports by traffic volume */
   vpcTopPorts: [
     `fetch logs`,
-    `| filter matchesValue(aws.log_group, "*vpc*") and matchesValue(aws.log_group, "*flow-logs*")`,
-    `| parse content, "LD:version SP LD:accountId SP LD:interfaceId SP LD:sourceAddress SP LD:destinationAddress SP LD:sourcePort SP LD:destinationPort SP LD:protocol SP LD:packets SP LD:bytes SP LD:startTimestamp SP LD:endTimestamp SP LD:action SP LD:logStatus SP LD:vpcId SP LD:subnetId SP LD:instanceId SP LD:tcpFlags SP LD:flowType SP LD:pktSrcAddr SP LD:pktDstAddr SP LD:region SP LD:azId SP LD:subLocationType SP LD:subLocationId SP LD:pktSrcAwsService SP LD:pktDstAwsService SP LD:flowDirection SP LD:trafficPath SP LD:ecsClusterId SP LD:ecsClusterName SP LD:ecsServiceName"`,
+    `| filter matchesValue(aws.log_group, "*flow-logs*")`,
     `| filter action == "ACCEPT"`,
-    `| summarize totalBytes=sum(toLong(bytes)), by:{destinationPort}`,
-    `| sort totalBytes desc`,
-    `| limit 20`,
+    `| filter log_status == "OK"`,
+    `| summarize {Traffic = sum(toLong(bytes)), Flows = count()}, by:{dstport}`,
+    `| fieldsRename \`Destination Port\` = dstport`,
+    `| sort Traffic desc`,
+    `| limit 10`,
   ].join('\n'),
 
   /** CPU usage per device */
