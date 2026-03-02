@@ -128,7 +128,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       label: 'Unreachable Devices',
       dqlQuery: [
         `fetch \`dt.entity.network:device\``,
-        `| fieldsAdd ip = ipAddress[0]`,
+        `| fieldsAdd ip = entity.name`,
         `| lookup [`,
         `  timeseries avgAvail=avg(dt.synthetic.multi_protocol.request.availability), by:{target.ip_address}`,
         `  | fieldsAdd ip=target.ip_address`,
@@ -139,7 +139,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ].join('\n'),
       weekAgoDqlQuery: [
         `fetch \`dt.entity.network:device\``,
-        `| fieldsAdd ip = ipAddress[0]`,
+        `| fieldsAdd ip = entity.name`,
         `| lookup [`,
         `  timeseries avgAvail=avg(dt.synthetic.multi_protocol.request.availability), from: -7d-1d, to: -7d, by:{target.ip_address}`,
         `  | fieldsAdd ip=target.ip_address`,
@@ -160,7 +160,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       label: 'Avg Reachability %',
       dqlQuery: [
         `fetch \`dt.entity.network:device\``,
-        `| fieldsAdd ip = ipAddress[0]`,
+        `| fieldsAdd ip = entity.name`,
         `| lookup [`,
         `  timeseries avgAvail=avg(dt.synthetic.multi_protocol.request.availability), by:{target.ip_address}`,
         `  | fieldsAdd ip=target.ip_address`,
@@ -170,7 +170,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ].join('\n'),
       weekAgoDqlQuery: [
         `fetch \`dt.entity.network:device\``,
-        `| fieldsAdd ip = ipAddress[0]`,
+        `| fieldsAdd ip = entity.name`,
         `| lookup [`,
         `  timeseries avgAvail=avg(dt.synthetic.multi_protocol.request.availability), from: -7d-1d, to: -7d, by:{target.ip_address}`,
         `  | fieldsAdd ip=target.ip_address`,
@@ -630,7 +630,7 @@ export const NETWORK_QUERIES = {
   deviceInventory: [
     `fetch \`dt.entity.network:device\``,
     `| fieldsAdd deviceName = entity.name`,
-    `| fieldsAdd ip = ipAddress[0]`,
+    `| fieldsAdd ip = entity.name`,
     `| fieldsAdd deviceType = device_type`,
     `| lookup [`,
     `  timeseries cpuPerc=avg(com.dynatrace.extension.network_device.cpu_usage), by:{\`dt.entity.network:device\`}`,
@@ -779,7 +779,7 @@ export const NETWORK_QUERIES = {
   topologyNodes: [
     `fetch \`dt.entity.network:device\``,
     `| fieldsAdd deviceName = entity.name`,
-    `| fieldsAdd ip = ipAddress[0]`,
+    `| fieldsAdd ip = entity.name`,
     `| fieldsAdd deviceType = device_type`,
     `| lookup [`,
     `  timeseries cpuPerc=avg(com.dynatrace.extension.network_device.cpu_usage), by:{\`dt.entity.network:device\`}`,
@@ -831,7 +831,7 @@ export const NETWORK_QUERIES = {
     `| filter avgState > 0`,
     `| lookup [`,
     `  fetch \`dt.entity.network:device\``,
-    `  | fieldsAdd mgmtIp = toString(ipAddress[0])`,
+    `  | fieldsAdd mgmtIp = entity.name`,
     `  | fields id, mgmtIp`,
     `], sourceField:bgp.peer.remote_addr, lookupField:mgmtIp, prefix:"peer."`,
     `| filter isNotNull(peer.id)`,
