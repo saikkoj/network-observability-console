@@ -4,11 +4,13 @@
  * Each cluster is a bubble on a real geographic map, sized by entity count and
  * colored by health status. Uses color="legend" + valueAccessor to tie BubbleLayer
  * to CategoricalLegend (matching the documented strato-geo pattern).
+ *
+ * IMPORTANT: MapView uses an internal _ChartLayout that measures its own container
+ * via _useGraphSize(). Do NOT wrap MapView in extra positioned/overflow containers —
+ * let it be the direct child of its layout slot so chart sizing works correctly.
  */
-import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { MapView, BubbleLayer, CategoricalLegend } from '@dynatrace/strato-geo';
-import Colors from '@dynatrace/strato-design-tokens/colors';
-import Borders from '@dynatrace/strato-design-tokens/borders';
 import type { TopologyCluster, HealthSummary } from '../types/network';
 
 /* ── Health → hex colour (raw hex only — CSS vars crash strato-geo) ── */
@@ -82,31 +84,6 @@ export const ClusterMap = ({
   viewState,
   hideLegend = false,
 }: ClusterMapProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
-
-  /*
-   * Deferred mount: MapView (maplibre-gl) must not initialize until the
-   * container has a resolved, non-zero width.  If it starts before CSS flex
-   * layout is complete the internal canvas is created at 0×0 and never
-   * resizes.  We measure on mount + on a short delay, then flip `ready`.
-   */
-  useEffect(() => {
-    const check = () => {
-      const el = containerRef.current;
-      if (el && el.offsetWidth > 0) {
-        setReady(true);
-        return true;
-      }
-      return false;
-    };
-    if (check()) return;
-    /* retry a few times to cover flex layout settling */
-    const t1 = setTimeout(check, 50);
-    const t2 = setTimeout(check, 200);
-    const t3 = setTimeout(check, 500);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
 
   /* Transform cluster data into BubbleLayer data points */
   const bubbleData = useMemo<ClusterBubble[]>(
@@ -145,114 +122,103 @@ export const ClusterMap = ({
 
   const resolvedViewState = viewState ?? defaultCenter;
 
+  /*
+   * Render MapView directly — no wrapper div.
+   * MapView's internal _ChartLayout handles all sizing via _useGraphSize().
+   * Wrapping in extra positioned/overflow containers breaks the internal
+   * ResizeObserver measurement and results in 0×0 canvas.
+   */
   return (
-    <div
-      ref={containerRef}
-      style={{
-        borderRadius: mini
-          ? `0 0 ${Borders.Radius.Container.Default} ${Borders.Radius.Container.Default}`
-          : Borders.Radius.Container.Default,
-        border: mini ? undefined : `1px solid ${Colors.Border.Neutral.Default}`,
-        borderTop: mini ? `1px solid ${Colors.Border.Neutral.Default}` : undefined,
-        overflow: 'hidden',
-        position: 'relative',
-        width: '100%',
-        height: typeof height === 'number' ? height : undefined,
-      }}
-    >
-      {ready && (
-        <MapView height={height} initialViewState={resolvedViewState}>
-        {bubbleData.length > 0 && (
-          <BubbleLayer
-            data={bubbleData}
-            color="legend"
-            valueAccessor="health"
-            scale="none"
-            radius={(item: ClusterBubble) => {
-              const minR = mini ? 8 : 14;
-              const maxR = mini ? 28 : 50;
-              return Math.max(minR, Math.min(maxR, Math.sqrt(item.entityCount) * (mini ? 4 : 6)));
-            }}
-          >
-            <BubbleLayer.Tooltip>
-              {(closestDot) => {
-                const d = closestDot.data as ClusterBubble;
-                const hs = d.healthSummary;
-                const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
-                return (
-                  <div style={{ padding: '4px 2px', minWidth: 180 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
-                      {d.label}
-                    </div>
-                    <div style={{ fontSize: 12, marginBottom: 3 }}>
-                      Entities: <b>{d.entityCount.toLocaleString()}</b>
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, fontSize: 11, marginBottom: 4 }}>
-                      <span style={{ color: HEALTH_HEX.Healthy }}>● {hs.healthy} ok</span>
-                      <span style={{ color: HEALTH_HEX.Warning }}>● {hs.warning} warn</span>
-                      <span style={{ color: HEALTH_HEX.Critical }}>● {hs.critical} crit</span>
-                    </div>
-                    {total > 0 && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          height: 4,
-                          borderRadius: 2,
-                          overflow: 'hidden',
-                          marginBottom: 4,
-                        }}
-                      >
-                        <div style={{ width: `${(hs.healthy / total) * 100}%`, background: HEALTH_HEX.Healthy }} />
-                        <div style={{ width: `${(hs.warning / total) * 100}%`, background: HEALTH_HEX.Warning }} />
-                        <div style={{ width: `${(hs.critical / total) * 100}%`, background: HEALTH_HEX.Critical }} />
-                      </div>
-                    )}
-                    {d.avgCpu != null && (
-                      <div style={{ fontSize: 11, opacity: 0.7 }}>
-                        CPU: {d.avgCpu}% · Mem: {d.avgMemory ?? 0}%
-                      </div>
-                    )}
+    <MapView height={height} initialViewState={resolvedViewState}>
+      {bubbleData.length > 0 && (
+        <BubbleLayer
+          data={bubbleData}
+          color="legend"
+          valueAccessor="health"
+          scale="none"
+          radius={(item: ClusterBubble) => {
+            const minR = mini ? 8 : 14;
+            const maxR = mini ? 28 : 50;
+            return Math.max(minR, Math.min(maxR, Math.sqrt(item.entityCount) * (mini ? 4 : 6)));
+          }}
+        >
+          <BubbleLayer.Tooltip>
+            {(closestDot) => {
+              const d = closestDot.data as ClusterBubble;
+              const hs = d.healthSummary;
+              const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
+              return (
+                <div style={{ padding: '4px 2px', minWidth: 180 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+                    {d.label}
+                  </div>
+                  <div style={{ fontSize: 12, marginBottom: 3 }}>
+                    Entities: <b>{d.entityCount.toLocaleString()}</b>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, fontSize: 11, marginBottom: 4 }}>
+                    <span style={{ color: HEALTH_HEX.Healthy }}>● {hs.healthy} ok</span>
+                    <span style={{ color: HEALTH_HEX.Warning }}>● {hs.warning} warn</span>
+                    <span style={{ color: HEALTH_HEX.Critical }}>● {hs.critical} crit</span>
+                  </div>
+                  {total > 0 && (
                     <div
                       style={{
-                        fontSize: 11,
-                        color: d.alertCount > 3 ? HEALTH_HEX.Warning : undefined,
-                        opacity: d.alertCount > 3 ? 1 : 0.7,
+                        display: 'flex',
+                        height: 4,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        marginBottom: 4,
                       }}
                     >
-                      Alerts: <b>{d.alertCount}</b>
+                      <div style={{ width: `${(hs.healthy / total) * 100}%`, background: HEALTH_HEX.Healthy }} />
+                      <div style={{ width: `${(hs.warning / total) * 100}%`, background: HEALTH_HEX.Warning }} />
+                      <div style={{ width: `${(hs.critical / total) * 100}%`, background: HEALTH_HEX.Critical }} />
                     </div>
-                    {onRegionClick && (
-                      <div
-                        style={{
-                          marginTop: 6,
-                          padding: '4px 0',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: '#73b1ff',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          borderTop: '1px solid rgba(255,255,255,0.1)',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDrill(d.id);
-                        }}
-                      >
-                        Drill Down →
-                      </div>
-                    )}
+                  )}
+                  {d.avgCpu != null && (
+                    <div style={{ fontSize: 11, opacity: 0.7 }}>
+                      CPU: {d.avgCpu}% · Mem: {d.avgMemory ?? 0}%
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: d.alertCount > 3 ? HEALTH_HEX.Warning : undefined,
+                      opacity: d.alertCount > 3 ? 1 : 0.7,
+                    }}
+                  >
+                    Alerts: <b>{d.alertCount}</b>
                   </div>
-                );
-              }}
-            </BubbleLayer.Tooltip>
-          </BubbleLayer>
-        )}
-
-        {!mini && !hideLegend && (
-          <CategoricalLegend colorPalette={LEGEND_PALETTE} position="bottom" />
-        )}
-        </MapView>
+                  {onRegionClick && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        padding: '4px 0',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: '#73b1ff',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        borderTop: '1px solid rgba(255,255,255,0.1)',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDrill(d.id);
+                      }}
+                    >
+                      Drill Down →
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          </BubbleLayer.Tooltip>
+        </BubbleLayer>
       )}
-    </div>
+
+      {!mini && !hideLegend && (
+        <CategoricalLegend colorPalette={LEGEND_PALETTE} position="bottom" />
+      )}
+    </MapView>
   );
 };

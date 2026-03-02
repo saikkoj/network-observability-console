@@ -151,7 +151,7 @@ export const Topology = () => {
   const mapKey = `map-${level}-${regionId ?? 'all'}`;
 
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', minWidth: 0, height: mapH, contain: 'strict' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', minWidth: 0, height: mapH, width: '100%' }}>
       {/* ── PERSISTENT MAP BACKGROUND ── */}
       {demoMode && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
