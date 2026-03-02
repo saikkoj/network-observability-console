@@ -3,7 +3,7 @@ import { useDql } from '@dynatrace-sdk/react-hooks';
 import { useDemoMode } from './useDemoMode';
 import { NETWORK_QUERIES } from '../data/networkCategories';
 import { DEMO_TOPOLOGY_NODES, DEMO_TOPOLOGY_EDGES } from '../data/demoData';
-import type { TopologyNode, TopologyEdge, DeviceRole } from '../types/network';
+import type { TopologyNode, TopologyEdge, DeviceRole, TopologyEdgeType } from '../types/network';
 import { toNum } from '../utils';
 
 /* ── Map Dynatrace device_type → canonical DeviceRole ── */
@@ -119,17 +119,60 @@ function layoutNodes(
 export interface UseTopologyDataResult {
   nodes: TopologyNode[];
   edges: TopologyEdge[];
+  /** Counts per discovery source for the legend */
+  edgeCounts: Record<TopologyEdgeType, number>;
   isLoading: boolean;
   error: string | null;
 }
 
 /**
+ * Merge edges from multiple discovery sources.
+ * LLDP/CDP edges take priority — BGP and flow edges are only added when
+ * there is no existing edge between the same pair (regardless of direction).
+ */
+function mergeEdges(
+  lldpEdges: TopologyEdge[],
+  bgpEdges: TopologyEdge[],
+  flowEdges: TopologyEdge[],
+): TopologyEdge[] {
+  const seen = new Set<string>();
+  const edgeKey = (a: string, b: string) => [a, b].sort().join('↔');
+  const result: TopologyEdge[] = [];
+
+  for (const e of lldpEdges) {
+    const k = edgeKey(e.source, e.target);
+    if (!seen.has(k)) {
+      seen.add(k);
+      result.push({ ...e, edgeType: 'lldp' });
+    }
+  }
+  for (const e of bgpEdges) {
+    const k = edgeKey(e.source, e.target);
+    if (!seen.has(k)) {
+      seen.add(k);
+      result.push({ ...e, edgeType: 'bgp' });
+    }
+  }
+  for (const e of flowEdges) {
+    const k = edgeKey(e.source, e.target);
+    if (!seen.has(k)) {
+      seen.add(k);
+      result.push({ ...e, edgeType: 'flow' });
+    }
+  }
+  return result;
+}
+
+/**
  * Provides topology nodes + edges from either demo data or live DQL.
  *
- * Live mode runs two DQL queries:
+ * Live mode runs up to four DQL queries:
  *   1. `topologyNodes` — fetches all network devices with CPU/mem/problem count
- *   2. `topologyEdges` — fetches interface-to-device relationships with utilization
+ *   2. `topologyEdges` — LLDP/CDP-based interface relationships with utilization
+ *   3. `topologyBgpEdges` — BGP peering sessions correlated to device IPs
+ *   4. `topologyFlowEdges` — flow-inferred device-to-device communication paths
  *
+ * Edges from all sources are merged with LLDP taking priority.
  * Nodes are auto-positioned using a force-directed layout when live;
  * demo data uses hand-placed coordinates.
  */
@@ -144,16 +187,25 @@ export function useTopologyData(
     { enabled: !demoMode, refetchInterval: 60_000 },
   );
 
-  const edgesResult = useDql(
+  const lldpEdgesResult = useDql(
     { query: NETWORK_QUERIES.topologyEdges },
     { enabled: !demoMode, refetchInterval: 60_000 },
+  );
+
+  const bgpEdgesResult = useDql(
+    { query: NETWORK_QUERIES.topologyBgpEdges },
+    { enabled: !demoMode, refetchInterval: 120_000 },
+  );
+
+  const flowEdgesResult = useDql(
+    { query: NETWORK_QUERIES.topologyFlowEdges },
+    { enabled: !demoMode, refetchInterval: 120_000 },
   );
 
   const liveData = useMemo(() => {
     if (demoMode) return null;
     const nodeRecords = nodesResult.data?.records;
-    const edgeRecords = edgesResult.data?.records;
-    if (!nodeRecords || !edgeRecords) return null;
+    if (!nodeRecords) return null;
 
     // Build nodes (without x/y — layout does that)
     const rawNodes: Omit<TopologyNode, 'x' | 'y'>[] = nodeRecords.map((r: any) => ({
@@ -167,38 +219,78 @@ export function useTopologyData(
       memory: toNum(r.memPct),
     }));
 
-    // Build edges
-    const rawEdges: TopologyEdge[] = edgeRecords.map((r: any) => ({
+    const nodeIds = new Set(rawNodes.map((n) => n.id));
+
+    // Parse LLDP/CDP edges
+    const lldpEdges: TopologyEdge[] = (lldpEdgesResult.data?.records ?? []).map((r: any) => ({
       source: String(r.sourceDevice ?? ''),
       target: String(r.targetDevice ?? ''),
       utilization: toNum(r.utilization),
       bandwidth: toNum(r.bandwidth),
+      edgeType: 'lldp' as const,
     }));
 
-    // Filter edges whose endpoints exist in the node set
-    const nodeIds = new Set(rawNodes.map((n) => n.id));
-    const validEdges = rawEdges.filter(
+    // Parse BGP edges (use 0 for utilization/bandwidth since BGP is control-plane)
+    const bgpEdges: TopologyEdge[] = (bgpEdgesResult.data?.records ?? []).map((r: any) => ({
+      source: String(r.source ?? ''),
+      target: String(r.target ?? ''),
+      utilization: 0,
+      bandwidth: 0,
+      edgeType: 'bgp' as const,
+    }));
+
+    // Parse flow-inferred edges (traffic amount → rough utilization estimate)
+    const flowEdges: TopologyEdge[] = (flowEdgesResult.data?.records ?? []).map((r: any) => ({
+      source: String(r.source ?? ''),
+      target: String(r.target ?? ''),
+      utilization: 0,
+      bandwidth: toNum(r.traffic),
+      edgeType: 'flow' as const,
+    }));
+
+    // Merge all edge sources, then filter to valid node pairs
+    const merged = mergeEdges(lldpEdges, bgpEdges, flowEdges);
+    const validEdges = merged.filter(
       (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
     );
 
     // Auto-layout
     const nodes = layoutNodes(rawNodes, validEdges, width, height);
-    return { nodes, edges: validEdges };
-  }, [demoMode, nodesResult.data, edgesResult.data, width, height]);
+
+    // Count edges by type
+    const edgeCounts: Record<TopologyEdgeType, number> = { lldp: 0, bgp: 0, flow: 0, manual: 0 };
+    for (const e of validEdges) {
+      if (e.edgeType) edgeCounts[e.edgeType]++;
+    }
+
+    return { nodes, edges: validEdges, edgeCounts };
+  }, [
+    demoMode,
+    nodesResult.data,
+    lldpEdgesResult.data,
+    bgpEdgesResult.data,
+    flowEdgesResult.data,
+    width,
+    height,
+  ]);
 
   if (demoMode) {
+    const demoCounts: Record<TopologyEdgeType, number> = { lldp: DEMO_TOPOLOGY_EDGES.length, bgp: 0, flow: 0, manual: 0 };
     return {
       nodes: DEMO_TOPOLOGY_NODES,
       edges: DEMO_TOPOLOGY_EDGES,
+      edgeCounts: demoCounts,
       isLoading: false,
       error: null,
     };
   }
 
+  const defaultCounts: Record<TopologyEdgeType, number> = { lldp: 0, bgp: 0, flow: 0, manual: 0 };
   return {
     nodes: liveData?.nodes ?? [],
     edges: liveData?.edges ?? [],
-    isLoading: nodesResult.isLoading || edgesResult.isLoading,
-    error: nodesResult.error?.message ?? edgesResult.error?.message ?? null,
+    edgeCounts: liveData?.edgeCounts ?? defaultCounts,
+    isLoading: nodesResult.isLoading || lldpEdgesResult.isLoading,
+    error: nodesResult.error?.message ?? lldpEdgesResult.error?.message ?? null,
   };
 }

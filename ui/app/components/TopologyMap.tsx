@@ -5,7 +5,7 @@ import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 
-import type { TopologyNode, TopologyEdge } from '../types/network';
+import type { TopologyNode, TopologyEdge, TopologyEdgeType } from '../types/network';
 
 /* ── Colour helpers ───────────────────────────────── */
 const HEALTH_COLOR: Record<string, string> = {
@@ -13,6 +13,14 @@ const HEALTH_COLOR: Record<string, string> = {
   warning:  '#fd8232',
   critical: '#dc172a',
   unknown:  '#73b1ff',
+};
+
+/** Edge-type dash patterns and colours (for non-LLDP sources) */
+const EDGE_TYPE_META: Record<TopologyEdgeType, { dashArray: string; label: string; color?: string }> = {
+  lldp:   { dashArray: 'none',  label: 'LLDP / CDP' },
+  bgp:    { dashArray: '8,4',   label: 'BGP Peer',  color: '#73b1ff' },
+  flow:   { dashArray: '3,4',   label: 'Flow Inferred', color: '#b388ff' },
+  manual: { dashArray: '12,4,2,4', label: 'Manual' },
 };
 
 function edgeColor(utilization: number): string {
@@ -210,13 +218,14 @@ function Tooltip({ node, x, y }: { node: TopologyNode; x: number; y: number }) {
 interface TopologyMapProps {
   nodes: TopologyNode[];
   edges: TopologyEdge[];
+  edgeCounts?: Record<TopologyEdgeType, number>;
   height?: number;
   mini?: boolean;
   isLoading?: boolean;
   error?: string | null;
 }
 
-export const TopologyMap = ({ nodes, edges, height = 500, mini = false, isLoading = false, error = null }: TopologyMapProps) => {
+export const TopologyMap = ({ nodes, edges, edgeCounts, height = 500, mini = false, isLoading = false, error = null }: TopologyMapProps) => {
 
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -295,7 +304,7 @@ export const TopologyMap = ({ nodes, edges, height = 500, mini = false, isLoadin
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>Legend</div>
+          <div style={{ fontWeight: 700, marginBottom: 2 }}>Node Health</div>
           {Object.entries(HEALTH_COLOR).map(([key, col]) => (
             <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: col }} />
@@ -315,6 +324,29 @@ export const TopologyMap = ({ nodes, edges, height = 500, mini = false, isLoadin
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span>🖥</span> Server
           </div>
+
+          {/* Edge type legend — only show types that have edges */}
+          {edgeCounts && Object.values(edgeCounts).some(c => c > 0) && (
+            <>
+              <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0' }} />
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Link Source</div>
+              {(Object.entries(EDGE_TYPE_META) as [TopologyEdgeType, typeof EDGE_TYPE_META[TopologyEdgeType]][])
+                .filter(([type]) => (edgeCounts[type] ?? 0) > 0)
+                .map(([type, meta]) => (
+                  <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width={24} height={6}>
+                      <line
+                        x1={0} y1={3} x2={24} y2={3}
+                        stroke={meta.color ?? '#2ab06f'}
+                        strokeWidth={2}
+                        strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
+                      />
+                    </svg>
+                    {meta.label} ({edgeCounts[type]})
+                  </div>
+                ))}
+            </>
+          )}
         </div>
       )}
 
@@ -330,13 +362,16 @@ export const TopologyMap = ({ nodes, edges, height = 500, mini = false, isLoadin
           const src = nodeById[edge.source];
           const tgt = nodeById[edge.target];
           if (!src || !tgt) return null;
-          const col = edgeColor(edge.utilization);
-          const w = edgeWidth(edge.utilization);
+          const eType = edge.edgeType ?? 'lldp';
+          const meta = EDGE_TYPE_META[eType];
+          // LLDP edges use utilization-based colour; others use their fixed colour
+          const col = eType === 'lldp' ? edgeColor(edge.utilization) : (meta.color ?? edgeColor(edge.utilization));
+          const w = eType === 'lldp' ? edgeWidth(edge.utilization) : 1.5;
           const isConnectedToHover =
             hoveredNode && (edge.source === hoveredNode || edge.target === hoveredNode);
           return (
             <line
-              key={edge.id ?? `${edge.source}-${edge.target}`}
+              key={edge.id ?? `${edge.source}-${edge.target}-${eType}`}
               x1={src.x}
               y1={src.y}
               x2={tgt.x}
@@ -345,6 +380,7 @@ export const TopologyMap = ({ nodes, edges, height = 500, mini = false, isLoadin
               strokeWidth={isConnectedToHover ? w + 1.5 : w}
               strokeOpacity={hoveredNode ? (isConnectedToHover ? 1 : 0.25) : 0.7}
               strokeLinecap="round"
+              strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
               style={{ transition: 'all 0.15s ease' }}
             />
           );

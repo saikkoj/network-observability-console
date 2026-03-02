@@ -218,7 +218,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       label: 'Saturated Interfaces (>95%)',
       dqlQuery: [
         `fetch dt.entity.network:interface`,
-        `| fieldsAdd device = belongs_to[dt.entity.network:device]`,
+        `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
         `| lookup [fetch dt.entity.network:device | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -236,7 +236,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ].join('\n'),
       weekAgoDqlQuery: [
         `fetch dt.entity.network:interface`,
-        `| fieldsAdd device = belongs_to[dt.entity.network:device]`,
+        `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
         `| lookup [fetch dt.entity.network:device | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -264,7 +264,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       label: 'Saturated Devices',
       dqlQuery: [
         `fetch dt.entity.network:interface`,
-        `| fieldsAdd device = belongs_to[dt.entity.network:device]`,
+        `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
         `| lookup [fetch dt.entity.network:device | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -282,7 +282,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ].join('\n'),
       weekAgoDqlQuery: [
         `fetch dt.entity.network:interface`,
-        `| fieldsAdd device = belongs_to[dt.entity.network:device]`,
+        `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
         `| lookup [fetch dt.entity.network:device | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -661,7 +661,7 @@ export const NETWORK_QUERIES = {
   /** Interface health table — top interfaces by load */
   interfaceHealth: [
     `fetch dt.entity.network:interface`,
-    `| fieldsAdd device = belongs_to[dt.entity.network:device]`,
+    `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
     `| lookup [fetch dt.entity.network:device | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
     `| fieldsAdd deviceName = d.deviceName`,
     `| lookup [`,
@@ -763,7 +763,7 @@ export const NETWORK_QUERIES = {
   /** Interface up/down per device */
   interfaceUpDown: [
     `fetch dt.entity.network:interface`,
-    `| fieldsAdd device = belongs_to[dt.entity.network:device]`,
+    `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
     `| lookup [fetch dt.entity.network:device | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
     `| fieldsAdd deviceName = d.deviceName`,
     `| lookup [`,
@@ -803,8 +803,8 @@ export const NETWORK_QUERIES = {
   /** Topology — edges between devices based on shared interfaces with utilization */
   topologyEdges: [
     `fetch dt.entity.network:interface`,
-    `| fieldsAdd sourceDevice = belongs_to[dt.entity.network:device]`,
-    `| fieldsAdd targetDevice = connects_to[dt.entity.network:device]`,
+    `| fieldsAdd sourceDevice = \`belongs_to[dt.entity.network:device]\``,
+    `| fieldsAdd targetDevice = \`connects_to[dt.entity.network:device]\``,
     `| filter isNotNull(targetDevice)`,
     `| lookup [`,
     `  timeseries {`,
@@ -817,5 +817,51 @@ export const NETWORK_QUERIES = {
     `| fieldsAdd utilPct = if(ifSpeed > 0, (bw.bitsPerSec / ifSpeed) * 100, 0)`,
     `| summarize utilization = avg(utilPct), bandwidth = max(ifSpeed), by:{sourceDevice, targetDevice}`,
     `| fields sourceDevice, targetDevice, utilization, bandwidth`,
+  ].join('\n'),
+
+  /**
+   * Topology — BGP peer edges between devices.
+   * Joins BGP peer remote addresses back to device management IPs to find the
+   * target device entity for each peering session.
+   */
+  topologyBgpEdges: [
+    `timeseries bgpState = avg(com.dynatrace.extension.network_device.bgp.peer.state),`,
+    `  by:{dt.entity.network:device, bgp.peer.remote_addr}`,
+    `| fieldsAdd avgState = arrayAvg(bgpState)`,
+    `| filter avgState > 0`,
+    `| lookup [`,
+    `  fetch dt.entity.network:device`,
+    `  | fieldsAdd mgmtIp = toString(ipAddress[0])`,
+    `  | fields id, mgmtIp`,
+    `], sourceField:bgp.peer.remote_addr, lookupField:mgmtIp, prefix:"peer."`,
+    `| filter isNotNull(peer.id)`,
+    `| summarize bgpState = avg(avgState), by:{source = dt.entity.network:device, target = peer.id}`,
+    `| fields source, target, bgpState`,
+  ].join('\n'),
+
+  /**
+   * Topology — flow-based inferred edges between devices.
+   * Uses interface traffic metrics paired with device ownership to find
+   * device-to-device communication paths even when LLDP/CDP data is absent.
+   */
+  topologyFlowEdges: [
+    `fetch dt.entity.network:interface`,
+    `| fieldsAdd device = \`belongs_to[dt.entity.network:device]\``,
+    `| filter isNotNull(device)`,
+    `| lookup [`,
+    `  timeseries {`,
+    `    ifInBytes = sum(com.dynatrace.extension.network_device.if.bytes_in.count),`,
+    `    ifOutBytes = sum(com.dynatrace.extension.network_device.if.bytes_out.count)`,
+    `  }, by:{dt.entity.network:interface}`,
+    `  | fieldsAdd totalBytes = arraySum(ifInBytes) + arraySum(ifOutBytes)`,
+    `], sourceField:id, lookupField:dt.entity.network:interface, prefix:"t."`,
+    `| fieldsAdd totalBytes = coalesce(t.totalBytes, 0)`,
+    `| filter totalBytes > 0`,
+    `| fieldsAdd neighbor = \`connects_to[dt.entity.network:device]\``,
+    `| filter isNotNull(neighbor) and neighbor != device`,
+    `| summarize traffic = sum(totalBytes), by:{source = device, target = neighbor}`,
+    `| sort traffic desc`,
+    `| limit 200`,
+    `| fields source, target, traffic`,
   ].join('\n'),
 } as const;

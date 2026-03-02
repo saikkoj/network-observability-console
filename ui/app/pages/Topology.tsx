@@ -11,7 +11,7 @@ import { modeBadgeStyle } from '../utils';
 
 export const Topology = () => {
   const { demoMode } = useDemoMode();
-  const { nodes, edges, isLoading, error } = useTopologyData(960, 600);
+  const { nodes, edges, edgeCounts, isLoading, error } = useTopologyData(960, 600);
 
   return (
     <Flex flexDirection="column" padding={24} gap={20}>
@@ -30,7 +30,7 @@ export const Topology = () => {
       </Flex>
 
       {/* Full topology map */}
-      <TopologyMap nodes={nodes} edges={edges} height={600} isLoading={isLoading} error={error} />
+      <TopologyMap nodes={nodes} edges={edges} edgeCounts={edgeCounts} height={600} isLoading={isLoading} error={error} />
 
       {/* Utilization legend */}
       <Flex

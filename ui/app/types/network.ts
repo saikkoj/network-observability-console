@@ -97,6 +97,9 @@ export interface TopologyNode {
   memory?: number;
 }
 
+/** How the edge was discovered */
+export type TopologyEdgeType = 'lldp' | 'bgp' | 'flow' | 'manual';
+
 export interface TopologyEdge {
   id?: string;
   source: string;
@@ -105,6 +108,8 @@ export interface TopologyEdge {
   utilization: number;
   /** Bits per second */
   bandwidth: number;
+  /** Discovery source — defaults to 'lldp' for backwards compat */
+  edgeType?: TopologyEdgeType;
 }
 
 /* ── Device & Interface (table data shapes) ───────── */
