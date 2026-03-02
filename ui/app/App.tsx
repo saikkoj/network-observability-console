@@ -14,10 +14,22 @@ import { Data } from './pages/Data';
 import { AnomalyDetectors } from './pages/AnomalyDetectors';
 import { DemoModeProvider } from './hooks/useDemoMode';
 
+/* Anti-shake: prevent layout oscillation from scrollbar toggle & resize cascading */
+const ANTI_SHAKE_CSS = `
+  html, main, [role="main"] {
+    scrollbar-gutter: stable !important;
+  }
+  body {
+    overflow-x: hidden !important;
+  }
+`;
+
 export const App = () => {
   return (
-    <ErrorBoundary>
-      <DemoModeProvider>
+    <>
+      <style>{ANTI_SHAKE_CSS}</style>
+      <ErrorBoundary>
+        <DemoModeProvider>
         <Page>
           <Page.Header>
             <Header />
@@ -37,5 +49,6 @@ export const App = () => {
         </Page>
       </DemoModeProvider>
     </ErrorBoundary>
+    </>
   );
 };

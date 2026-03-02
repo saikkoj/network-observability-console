@@ -99,7 +99,7 @@ export const NocStatusBar = ({
       <div style={{ width: 1, height: 36, background: Colors.Border.Neutral.Default }} />
 
       {/* Category pills */}
-      <Flex gap={6} alignItems="center" flexWrap="wrap" style={{ flex: 1, minWidth: 0 }}>
+      <Flex gap={6} alignItems="center" flexWrap="wrap" style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
         {categories.map((cat) => (
           <Flex
             key={cat.label}
