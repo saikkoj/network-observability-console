@@ -119,10 +119,10 @@ export const ClusterMap = ({
     Critical: HEALTH_HEX.critical,
   };
 
-  /* Use controlled viewState when provided, otherwise uncontrolled initialViewState */
-  const mapProps = viewState
-    ? { viewState }
-    : { initialViewState: defaultCenter };
+  /* Always use uncontrolled initialViewState.
+     Controlled viewState breaks tile rendering in strato-geo MapView.
+     Drill-down zoom is achieved by re-mounting via key prop in the parent. */
+  const mapProps = { initialViewState: viewState ?? defaultCenter };
 
   return (
     <div

@@ -318,22 +318,21 @@ export function useTopologyData(
     [demoMode, width, height],
   );
 
-  if (demoMode) {
-    const demoCounts: Record<TopologyEdgeType, number> = { lldp: DEMO_TOPOLOGY_EDGES.length, bgp: 0, flow: 0, manual: 0 };
-    return {
-      nodes: demoScaled,
-      edges: DEMO_TOPOLOGY_EDGES,
-      edgeCounts: demoCounts,
-      isLoading: false,
-      error: null,
-    };
-  }
+  /* Stabilise demo return — useMemo prevents new object every render */
+  const demoResult = useMemo<UseTopologyDataResult>(() => ({
+    nodes: demoScaled,
+    edges: DEMO_TOPOLOGY_EDGES,
+    edgeCounts: { lldp: DEMO_TOPOLOGY_EDGES.length, bgp: 0, flow: 0, manual: 0 },
+    isLoading: false,
+    error: null,
+  }), [demoScaled]);
 
-  const defaultCounts: Record<TopologyEdgeType, number> = { lldp: 0, bgp: 0, flow: 0, manual: 0 };
+  if (demoMode) return demoResult;
+
   return {
     nodes: liveData?.nodes ?? [],
     edges: liveData?.edges ?? [],
-    edgeCounts: liveData?.edgeCounts ?? defaultCounts,
+    edgeCounts: liveData?.edgeCounts ?? { lldp: 0, bgp: 0, flow: 0, manual: 0 },
     isLoading: nodesResult.isLoading || lldpEdgesResult.isLoading,
     error: nodesResult.error?.message ?? lldpEdgesResult.error?.message ?? null,
   };
