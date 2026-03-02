@@ -109,7 +109,7 @@ export const Home = () => {
     <>
       <style>{pulseKeyframes}</style>
 
-      <Flex flexDirection="column" padding={24} gap={20} style={{ overflow: 'hidden', scrollbarGutter: 'stable' }}>
+      <Flex flexDirection="column" padding={24} gap={20} style={{ overflow: 'hidden', scrollbarGutter: 'stable', minWidth: 0 }}>
         {/* ── NOC Header ──────────────────── */}
         <Flex alignItems="center" justifyContent="space-between">
           <Flex alignItems="center" gap={12}>
@@ -150,9 +150,9 @@ export const Home = () => {
         <NocActionBar />
 
         {/* ── 4. Topology Mini-Map + Trend side-by-side ── */}
-        <Flex gap={16} alignItems="stretch">
+        <Flex gap={16} alignItems="stretch" style={{ minWidth: 0 }}>
           {/* Mini cluster map */}
-          <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             <Flex
               alignItems="center"
               justifyContent="space-between"
@@ -189,7 +189,7 @@ export const Home = () => {
           <div
             style={{
               flex: 1,
-              minWidth: 200,
+              minWidth: 0,
               background: Colors.Background.Surface.Default,
               borderRadius: Borders.Radius.Container.Default,
               border: `1px solid ${Colors.Border.Neutral.Default}`,

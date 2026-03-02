@@ -6,7 +6,8 @@ import { Button } from '@dynatrace/strato-components/buttons';
 import { Link } from '@dynatrace/strato-components/typography';
 import { Tabs, Tab } from '@dynatrace/strato-components-preview/navigation';
 import { HoneycombChart } from '@dynatrace/strato-components-preview/charts';
-import { ClusterMap } from '../components/ClusterMap';
+import { ClusterMap, FINLAND_CENTER } from '../components/ClusterMap';
+import type { MapViewState } from '../components/ClusterMap';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { useClusterData } from '../hooks/useClusterData';
@@ -42,6 +43,26 @@ function worstHealth(hs: HealthSummary): string {
   return '#2ab06f';
 }
 
+/* ── Overlay panel wrapper — floats on top of the map ── */
+function OverlayPanel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 64,
+        left: 16,
+        right: 16,
+        bottom: 16,
+        overflowY: 'auto',
+        pointerEvents: 'none',
+        zIndex: 5,
+      }}
+    >
+      <div style={{ pointerEvents: 'auto' }}>{children}</div>
+    </div>
+  );
+}
+
 export const Topology = () => {
   const { demoMode } = useDemoMode();
   const location = useLocation();
@@ -62,7 +83,6 @@ export const Topology = () => {
         setSiteId(null);
         setLevel('region');
       }
-      /* Clear nav state so refresh doesn't re-drill */
       window.history.replaceState({}, '');
     }
   }, [location.state, regions, getRegion]);
@@ -91,7 +111,7 @@ export const Topology = () => {
 
   /* breadcrumb parts */
   const crumbs: Array<{ label: string; action?: () => void }> = [
-    { label: '� All Regions', action: level !== 'country' ? () => { setLevel('country'); setRegionId(null); setSiteId(null); } : undefined },
+    { label: '🌐 All Regions', action: level !== 'country' ? () => { setLevel('country'); setRegionId(null); setSiteId(null); } : undefined },
   ];
   if (currentRegion) {
     crumbs.push({ label: currentRegion.label, action: level === 'site' ? () => { setLevel('region'); setSiteId(null); } : undefined });
@@ -100,89 +120,146 @@ export const Topology = () => {
     crumbs.push({ label: currentSite.label });
   }
 
-  /* ── If not demo mode and at country level, show flat topology as before ── */
+  /* ── Map viewState: auto-zoom based on drill-down level ── */
+  const mapViewState = useMemo<MapViewState>(() => {
+    if (level === 'region' && currentRegion) {
+      return { latitude: currentRegion.lat, longitude: currentRegion.lon, zoom: 8 };
+    }
+    if (level === 'site' && currentRegion) {
+      return { latitude: currentRegion.lat, longitude: currentRegion.lon, zoom: 10 };
+    }
+    /* Country level — show all Finland */
+    if (regions.length === 0) return FINLAND_CENTER;
+    const avgLat = regions.reduce((s, r) => s + r.lat, 0) / regions.length;
+    const avgLon = regions.reduce((s, r) => s + r.lon, 0) / regions.length;
+    return { latitude: avgLat, longitude: avgLon, zoom: 4.5 };
+  }, [level, currentRegion, regions]);
+
+  /* If not demo mode and at country level, show flat topology */
   const showFlatTopology = !demoMode && level === 'country';
 
   return (
-    <Flex flexDirection="column" padding={24} gap={20}>
-      {/* ── Header ── */}
-      <Flex alignItems="center" justifyContent="space-between">
-        <Flex alignItems="center" gap={12}>
-          <Heading level={3} style={{ margin: 0 }}>🗺️ Network Topology</Heading>
+    <div style={{ position: 'relative', overflow: 'hidden', minWidth: 0, height: '100%', minHeight: 640 }}>
+      {/* ── PERSISTENT MAP BACKGROUND ── */}
+      {demoMode && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <ClusterMap
+            regions={regions}
+            onRegionClick={level === 'country' ? drillToRegion : undefined}
+            height="100%"
+            viewState={mapViewState}
+            hideLegend={level !== 'country'}
+          />
+        </div>
+      )}
+
+      {/* ── HEADER BAR (always visible, floating) ── */}
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 24px',
+          background: demoMode ? 'rgba(20,20,30,0.75)' : Colors.Background.Surface.Default,
+          backdropFilter: demoMode ? 'blur(8px)' : undefined,
+          borderBottom: `1px solid ${Colors.Border.Neutral.Default}`,
+          minWidth: 0,
+        }}
+      >
+        <Flex alignItems="center" gap={12} style={{ minWidth: 0 }}>
+          <Heading level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>🗺️ Network Topology</Heading>
           <span style={modeBadgeStyle(demoMode)}>
             {demoMode ? 'DEMO' : 'LIVE'}
           </span>
           {demoMode && (
-            <span style={{ fontSize: 12, color: '#73b1ff', fontWeight: 600 }}>
+            <span style={{ fontSize: 12, color: '#73b1ff', fontWeight: 600, whiteSpace: 'nowrap' }}>
               {totalEntities.toLocaleString()} entities
             </span>
           )}
         </Flex>
 
         {/* Breadcrumb */}
-        <Flex alignItems="center" gap={4} style={{ fontSize: 12 }}>
+        <Flex alignItems="center" gap={4} style={{ fontSize: 12, minWidth: 0, flexShrink: 1 }}>
           {crumbs.map((c, i) => (
             <React.Fragment key={i}>
               {i > 0 && <span style={{ opacity: 0.4, margin: '0 4px' }}>›</span>}
               {c.action ? (
-                <Link onClick={c.action} style={{ cursor: 'pointer' }}>
+                <Link onClick={c.action} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   {c.label}
                 </Link>
               ) : (
-                <span style={{ opacity: 0.7, fontWeight: 600 }}>{c.label}</span>
+                <span style={{ opacity: 0.7, fontWeight: 600, whiteSpace: 'nowrap' }}>{c.label}</span>
               )}
             </React.Fragment>
           ))}
         </Flex>
-      </Flex>
-
-      {/* ── COUNTRY LEVEL: Finland map ── */}
-      {level === 'country' && demoMode && (
-        <ClusterMap
-          regions={regions}
-          onRegionClick={drillToRegion}
-          height={640}
-        />
-      )}
+      </div>
 
       {/* ── Flat topology for live mode ── */}
       {showFlatTopology && (
-        <TopologyMap
-          nodes={liveTopology.nodes}
-          edges={liveTopology.edges}
-          edgeCounts={liveTopology.edgeCounts}
-          height={600}
-          isLoading={liveTopology.isLoading}
-          error={liveTopology.error}
-        />
+        <div style={{ position: 'relative', zIndex: 5, padding: 24 }}>
+          <TopologyMap
+            nodes={liveTopology.nodes}
+            edges={liveTopology.edges}
+            edgeCounts={liveTopology.edgeCounts}
+            height={600}
+            isLoading={liveTopology.isLoading}
+            error={liveTopology.error}
+          />
+        </div>
       )}
 
-      {/* ── REGION LEVEL: Site grid ── */}
+      {/* ── COUNTRY LEVEL: map is the content, just show a subtle hint ── */}
+      {level === 'country' && demoMode && (
+        <OverlayPanel>
+          <div style={{
+            textAlign: 'center',
+            marginTop: 24,
+            padding: '12px 24px',
+            background: 'rgba(20,20,30,0.65)',
+            borderRadius: Borders.Radius.Container.Default,
+            backdropFilter: 'blur(6px)',
+            display: 'inline-block',
+          }}>
+            <Paragraph style={{ fontSize: 13, opacity: 0.8, margin: 0 }}>
+              Click a region bubble to drill down
+            </Paragraph>
+          </div>
+        </OverlayPanel>
+      )}
+
+      {/* ── REGION LEVEL: site grid overlay ── */}
       {level === 'region' && currentRegion && (
-        <>
-          {/* Region summary */}
+        <OverlayPanel>
+          {/* Region summary card */}
           <Flex
             gap={24}
             alignItems="center"
             style={{
               padding: '14px 24px',
-              background: Colors.Background.Surface.Default,
+              background: 'rgba(20,20,30,0.85)',
               borderRadius: Borders.Radius.Container.Default,
               border: `1px solid ${Colors.Border.Neutral.Default}`,
               boxShadow: BoxShadows.Surface.Raised.Rest,
+              backdropFilter: 'blur(8px)',
+              marginBottom: 16,
+              minWidth: 0,
+              flexWrap: 'wrap',
             }}
           >
             <Button variant="default" onClick={goBack}>
               <span style={{ fontSize: 14 }}>←</span> Back
             </Button>
-            <Flex flexDirection="column" gap={2} style={{ flex: 1 }}>
+            <Flex flexDirection="column" gap={2} style={{ flex: 1, minWidth: 0 }}>
               <Heading level={4} style={{ margin: 0 }}>{currentRegion.label}</Heading>
               <Paragraph style={{ fontSize: 11, opacity: 0.6 }}>
                 {currentRegion.deviceCount.toLocaleString()} entities
                 {currentSites.length > 0 && ` across ${currentSites.length} sites`}
               </Paragraph>
             </Flex>
-            <Flex gap={16}>
+            <Flex gap={16} flexWrap="wrap">
               <Flex flexDirection="column" alignItems="center">
                 <span style={{ fontSize: 18, fontWeight: 700, color: '#73b1ff' }}>{currentRegion.avgCpu ?? 0}%</span>
                 <span style={{ fontSize: 9, opacity: 0.5 }}>Avg CPU</span>
@@ -201,12 +278,12 @@ export const Topology = () => {
             </div>
           </Flex>
 
-          {/* Site cards grid — or placeholder if no sites in demo data */}
+          {/* Site cards grid */}
           {currentSites.length > 0 ? (
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
                 gap: 16,
               }}
             >
@@ -222,42 +299,46 @@ export const Topology = () => {
               gap={8}
               style={{
                 padding: 48,
-                background: Colors.Background.Surface.Default,
+                background: 'rgba(20,20,30,0.75)',
                 borderRadius: Borders.Radius.Container.Default,
                 border: `1px solid ${Colors.Border.Neutral.Default}`,
-                opacity: 0.7,
+                backdropFilter: 'blur(6px)',
               }}
             >
               <Paragraph style={{ fontSize: 14 }}>
                 No site-level data available for this region.
               </Paragraph>
               <Paragraph style={{ fontSize: 12, opacity: 0.6 }}>
-                In live mode, sites are discovered automatically from management zones and entity relationships.
+                In live mode, sites are discovered automatically from management zones.
               </Paragraph>
             </Flex>
           )}
-        </>
+        </OverlayPanel>
       )}
 
-      {/* ── SITE LEVEL: Device topology + Smartscape ── */}
+      {/* ── SITE LEVEL: Device topology + Smartscape overlay ── */}
       {level === 'site' && currentSite && siteTopology && (
-        <>
+        <OverlayPanel>
           {/* Site header */}
           <Flex
             gap={24}
             alignItems="center"
             style={{
               padding: '14px 24px',
-              background: Colors.Background.Surface.Default,
+              background: 'rgba(20,20,30,0.85)',
               borderRadius: Borders.Radius.Container.Default,
               border: `1px solid ${Colors.Border.Neutral.Default}`,
               boxShadow: BoxShadows.Surface.Raised.Rest,
+              backdropFilter: 'blur(8px)',
+              marginBottom: 16,
+              minWidth: 0,
+              flexWrap: 'wrap',
             }}
           >
             <Button variant="default" onClick={goBack}>
               <span style={{ fontSize: 14 }}>←</span> Back
             </Button>
-            <Flex flexDirection="column" gap={2} style={{ flex: 1 }}>
+            <Flex flexDirection="column" gap={2} style={{ flex: 1, minWidth: 0 }}>
               <Flex alignItems="center" gap={8}>
                 <span style={{ fontSize: 16 }}>{SITE_ICON[currentSite.siteType] ?? '📍'}</span>
                 <Heading level={4} style={{ margin: 0 }}>{currentSite.label}</Heading>
@@ -284,10 +365,11 @@ export const Topology = () => {
           {/* Tabbed views: Smartscape (HoneycombChart) + Topology Graph */}
           <div
             style={{
-              background: Colors.Background.Surface.Default,
+              background: 'rgba(20,20,30,0.85)',
               borderRadius: Borders.Radius.Container.Default,
               border: `1px solid ${Colors.Border.Neutral.Default}`,
               boxShadow: BoxShadows.Surface.Raised.Rest,
+              backdropFilter: 'blur(8px)',
               overflow: 'hidden',
             }}
           >
@@ -306,9 +388,9 @@ export const Topology = () => {
               </Tab>
             </Tabs>
           </div>
-        </>
+        </OverlayPanel>
       )}
-    </Flex>
+    </div>
   );
 };
 
@@ -373,11 +455,12 @@ function SiteCard({ site, onClick }: { site: TopologySite; onClick: () => void }
     <div
       onClick={onClick}
       style={{
-        background: Colors.Background.Surface.Default,
+        background: 'rgba(20,20,30,0.85)',
         borderRadius: Borders.Radius.Container.Default,
         border: `1px solid ${Colors.Border.Neutral.Default}`,
         borderLeft: `4px solid ${borderColor}`,
         boxShadow: BoxShadows.Surface.Raised.Rest,
+        backdropFilter: 'blur(6px)',
         padding: '16px 20px',
         cursor: 'pointer',
         transition: 'box-shadow 0.15s ease, transform 0.12s ease',

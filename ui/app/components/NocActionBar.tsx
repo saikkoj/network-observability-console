@@ -65,6 +65,7 @@ export const NocActionBar = () => {
             padding: '10px 20px',
             borderBottom: showMore ? `1px solid ${Colors.Border.Neutral.Default}` : 'none',
             overflow: 'hidden',
+            minWidth: 0,
           }}
         >
           <Flex alignItems="center" gap={8} style={{ marginRight: 8 }}>
