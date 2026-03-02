@@ -234,7 +234,7 @@ export const TopologyMap = ({ nodes, edges, edgeCounts, height = 500, mini = fal
   // Compute SVG viewBox to fit all nodes with padding
   const viewBox = useMemo(() => {
     if (nodes.length === 0) return '0 0 800 500';
-    const pad = 80;
+    const pad = 40;
     const xs = nodes.map(n => n.x);
     const ys = nodes.map(n => n.y);
     const minX = Math.min(...xs) - pad;

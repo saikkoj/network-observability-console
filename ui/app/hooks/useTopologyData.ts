@@ -31,6 +31,39 @@ function mapHealth(raw: unknown, problems: number): TopologyNode['health'] {
   return 'unknown';
 }
 
+/* ── Scale existing node positions to fit a target canvas ── */
+/**
+ * Linearly maps node x/y from their current bounding box
+ * into [PAD, width-PAD] × [PAD, height-PAD], preserving
+ * relative positions.  Used for demo data and as a fallback.
+ */
+function scaleNodesToFit(
+  nodes: TopologyNode[],
+  width: number,
+  height: number,
+): TopologyNode[] {
+  if (nodes.length <= 1) {
+    // Single node → center it
+    return nodes.map(n => ({ ...n, x: width / 2, y: height / 2 }));
+  }
+  const PAD = 60;
+  const xs = nodes.map(n => n.x);
+  const ys = nodes.map(n => n.y);
+  const srcMinX = Math.min(...xs);
+  const srcMaxX = Math.max(...xs);
+  const srcMinY = Math.min(...ys);
+  const srcMaxY = Math.max(...ys);
+  const srcW = srcMaxX - srcMinX || 1;
+  const srcH = srcMaxY - srcMinY || 1;
+  const tgtW = width - 2 * PAD;
+  const tgtH = height - 2 * PAD;
+  return nodes.map(n => ({
+    ...n,
+    x: PAD + ((n.x - srcMinX) / srcW) * tgtW,
+    y: PAD + ((n.y - srcMinY) / srcH) * tgtH,
+  }));
+}
+
 /* ── Force-directed layout ─────────────────────────── */
 /**
  * Places nodes using a simple force-directed algorithm.
@@ -281,9 +314,10 @@ export function useTopologyData(
   ]);
 
   if (demoMode) {
+    const scaledNodes = scaleNodesToFit(DEMO_TOPOLOGY_NODES, width, height);
     const demoCounts: Record<TopologyEdgeType, number> = { lldp: DEMO_TOPOLOGY_EDGES.length, bgp: 0, flow: 0, manual: 0 };
     return {
-      nodes: DEMO_TOPOLOGY_NODES,
+      nodes: scaledNodes,
       edges: DEMO_TOPOLOGY_EDGES,
       edgeCounts: demoCounts,
       isLoading: false,
