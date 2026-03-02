@@ -313,11 +313,15 @@ export function useTopologyData(
     height,
   ]);
 
+  const demoScaled = useMemo(
+    () => (demoMode ? scaleNodesToFit(DEMO_TOPOLOGY_NODES, width, height) : []),
+    [demoMode, width, height],
+  );
+
   if (demoMode) {
-    const scaledNodes = scaleNodesToFit(DEMO_TOPOLOGY_NODES, width, height);
     const demoCounts: Record<TopologyEdgeType, number> = { lldp: DEMO_TOPOLOGY_EDGES.length, bgp: 0, flow: 0, manual: 0 };
     return {
-      nodes: scaledNodes,
+      nodes: demoScaled,
       edges: DEMO_TOPOLOGY_EDGES,
       edgeCounts: demoCounts,
       isLoading: false,

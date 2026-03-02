@@ -86,7 +86,7 @@ function renderNodeShape(
     transform,
     onMouseEnter,
     onMouseLeave,
-    style: { cursor: 'pointer', transition: 'all 0.15s ease' } as React.CSSProperties,
+    style: { cursor: 'pointer', transition: 'transform 0.12s ease, opacity 0.15s ease' } as React.CSSProperties,
   };
 
   switch (node.role) {
@@ -381,7 +381,7 @@ export const TopologyMap = ({ nodes, edges, edgeCounts, height = 500, mini = fal
               strokeOpacity={hoveredNode ? (isConnectedToHover ? 1 : 0.25) : 0.7}
               strokeLinecap="round"
               strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
-              style={{ transition: 'all 0.15s ease' }}
+              style={{ transition: 'stroke-width 0.15s ease, stroke-opacity 0.15s ease' }}
             />
           );
         })}
