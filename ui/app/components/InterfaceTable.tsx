@@ -6,9 +6,11 @@ import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 import type { TableColumn } from '@dynatrace/strato-components-preview/tables';
+import { useDql } from '@dynatrace-sdk/react-hooks';
 
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_INTERFACES } from '../data/demoData';
+import { NETWORK_QUERIES } from '../data/networkCategories';
 import type { NetworkInterface } from '../types/network';
 
 /* ── Status styling ───────────────────────────────── */
@@ -55,9 +57,46 @@ interface InterfaceTableProps {
   liveInterfaces?: NetworkInterface[];
 }
 
+const toNum = (v: unknown): number => {
+  if (v == null) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 export const InterfaceTable = ({ liveInterfaces }: InterfaceTableProps) => {
   const { demoMode } = useDemoMode();
-  const interfaces = demoMode ? DEMO_INTERFACES : (liveInterfaces ?? []);
+
+  /* ── Live DQL query ──────────────────────────────── */
+  const { data: liveData, isLoading } = useDql(
+    { query: NETWORK_QUERIES.interfaceHealth },
+    { enabled: !demoMode, refetchInterval: 60_000 },
+  );
+
+  const liveMapped = useMemo<NetworkInterface[]>(() => {
+    if (demoMode || !liveData?.records) return [];
+    return liveData.records.map((r: Record<string, unknown>) => {
+      const inBps = toNum(r['inTrafficBps']);
+      const outBps = toNum(r['outTrafficBps']);
+      const rawStatus = String(r['ifStatus'] ?? 'up').toLowerCase();
+      const status: NetworkInterface['status'] = rawStatus === 'down' ? 'DOWN' : 'UP';
+      return {
+        entityId: String(r['dt.entity.network:interface'] ?? ''),
+        deviceName: String(r['d.deviceName'] ?? ''),
+        name: String(r['if.interfaceName'] ?? ''),
+        status,
+        inLoad: toNum(r['inLoad']),
+        outLoad: toNum(r['outLoad']),
+        inErrors: toNum(r['e.errorsIn']),
+        outErrors: toNum(r['e.errorsOut']),
+        inDiscards: toNum(r['e.discardsIn']),
+        outDiscards: toNum(r['e.discardsOut']),
+        trafficIn: inBps / 1_000_000_000,   // bps → Gbps
+        trafficOut: outBps / 1_000_000_000,  // bps → Gbps
+      };
+    });
+  }, [demoMode, liveData]);
+
+  const interfaces = demoMode ? DEMO_INTERFACES : (liveInterfaces ?? liveMapped);
 
   const columns = useMemo<TableColumn[]>(() => [
     {

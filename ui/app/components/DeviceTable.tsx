@@ -6,9 +6,11 @@ import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 import type { TableColumn } from '@dynatrace/strato-components-preview/tables';
+import { useDql } from '@dynatrace-sdk/react-hooks';
 
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_DEVICES } from '../data/demoData';
+import { NETWORK_QUERIES } from '../data/networkCategories';
 import type { NetworkDevice } from '../types/network';
 
 /* ── Status styling ───────────────────────────────── */
@@ -48,9 +50,45 @@ interface DeviceTableProps {
   liveDevices?: NetworkDevice[];
 }
 
+const toNum = (v: unknown): number => {
+  if (v == null) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
   const { demoMode } = useDemoMode();
-  const devices = demoMode ? DEMO_DEVICES : (liveDevices ?? []);
+
+  /* ── Live DQL query ──────────────────────────────── */
+  const { data: liveData, isLoading } = useDql(
+    { query: NETWORK_QUERIES.deviceInventory },
+    { enabled: !demoMode, refetchInterval: 60_000 },
+  );
+
+  const liveMapped = useMemo<NetworkDevice[]>(() => {
+    if (demoMode || !liveData?.records) return [];
+    return liveData.records.map((r: Record<string, unknown>) => {
+      const cpu = toNum(r['cpuPct']);
+      const mem = toNum(r['memPct']);
+      const problems = toNum(r['problems']);
+      const status: NetworkDevice['status'] =
+        problems > 0 ? 'DEGRADED' : cpu > 90 || mem > 90 ? 'DEGRADED' : 'UP';
+      return {
+        entityId: String(r['id'] ?? ''),
+        name: String(r['deviceName'] ?? ''),
+        ip: String(r['ip'] ?? ''),
+        type: String(r['deviceType'] ?? ''),
+        status,
+        cpu,
+        memory: mem,
+        problems,
+        reachability: 100,
+        traffic: 0,
+      };
+    });
+  }, [demoMode, liveData]);
+
+  const devices = demoMode ? DEMO_DEVICES : (liveDevices ?? liveMapped);
 
   const columns = useMemo<TableColumn[]>(() => [
     {

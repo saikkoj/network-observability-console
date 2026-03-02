@@ -472,6 +472,31 @@ export const FlowAnalytics = () => {
         <KpiCard icon="🔽" label="HTTP(S) Ingress Clients" value={httpIngress} loading={!demoMode && r3.isLoading} />
       </Flex>
 
+      {/* ── No data banner (live mode, no AWS flow logs) ── */}
+      {!demoMode && !r1.isLoading && logCount === 0 && (
+        <Flex
+          alignItems="center"
+          justifyContent="center"
+          gap={12}
+          style={{
+            ...cardStyle,
+            padding: '24px 32px',
+            background: 'rgba(115,177,255,0.06)',
+            border: '1px solid rgba(115,177,255,0.2)',
+          }}
+        >
+          <span style={{ fontSize: 24 }}>ℹ️</span>
+          <Flex flexDirection="column" gap={4}>
+            <Heading level={5} style={{ margin: 0 }}>No AWS VPC Flow Logs detected</Heading>
+            <Paragraph style={{ margin: 0, fontSize: 12, opacity: 0.7 }}>
+              This page requires AWS VPC Flow Logs ingested via the Dynatrace AWS Log Forwarder.
+              Configure log forwarding with log group matching <code>{LOG_GROUP}</code> to see live data.
+              Switch to Demo mode to preview the dashboard with sample data.
+            </Paragraph>
+          </Flex>
+        </Flex>
+      )}
+
       {/* ── Section: VPC Network Conversations ── */}
       <SectionHeading icon="🌐" title="VPC Network Conversations" />
 

@@ -1,6 +1,6 @@
 {
   "name": "network-observability-console",
-  "version": "1.7.8",
+  "version": "1.7.9",
   "description": "NOC-focused network observability console for Dynatrace — device health, topology, traffic analytics, and AI-powered operations",
   "scripts": {
     "build": "dt-app build --prod",
