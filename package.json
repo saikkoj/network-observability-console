@@ -1,6 +1,6 @@
 {
   "name": "network-observability-console",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "NOC-focused network observability console for Dynatrace — device health, topology, traffic analytics, and AI-powered operations",
   "scripts": {
     "build": "dt-app build --prod",
@@ -32,6 +32,7 @@
     "@dynatrace/strato-icons": "^1.5.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-intl": "^7.1.14",
     "react-router-dom": "^6.22.2"
   },
   "devDependencies": {
