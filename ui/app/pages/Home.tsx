@@ -179,9 +179,10 @@ export const Home = () => {
               regions={regions}
               height={260}
               mini
-              onRegionClick={(regionId) =>
-                navigate('/topology', { state: { regionId } })
-              }
+              onRegionClick={(regionId) => {
+                console.log('[Home] ClusterMap onRegionClick', regionId);
+                navigate('/topology', { state: { regionId } });
+              }}
             />
           </div>
 

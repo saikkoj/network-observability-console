@@ -5,7 +5,7 @@
  * colored by health status. Supports controlled viewState for auto-zoom on
  * drill-down. Always renders the map even with zero regions (empty map background).
  */
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { MapView, BubbleLayer, CategoricalLegend } from '@dynatrace/strato-geo';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
@@ -71,6 +71,25 @@ export const ClusterMap = ({
   viewState,
   hideLegend = false,
 }: ClusterMapProps) => {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [renderCount] = useState(() => ({ current: 0 }));
+  renderCount.current++;
+
+  /* ── DEBUG: Log every render with all props ── */
+  console.log(
+    `%c[ClusterMap] render #${renderCount.current}`,
+    'color: #73b1ff; font-weight: bold',
+    {
+      height,
+      heightType: typeof height,
+      mini,
+      viewState,
+      hideLegend,
+      regionsCount: regions.length,
+      hasOnRegionClick: !!onRegionClick,
+    },
+  );
+
   /* Transform cluster data into BubbleLayer data points */
   const bubbleData = useMemo<ClusterBubble[]>(
     () =>
@@ -119,13 +138,86 @@ export const ClusterMap = ({
     Critical: HEALTH_HEX.critical,
   };
 
-  /* Always use uncontrolled initialViewState.
-     Controlled viewState breaks tile rendering in strato-geo MapView.
-     Drill-down zoom is achieved by re-mounting via key prop in the parent. */
-  const mapProps = { initialViewState: viewState ?? defaultCenter };
+  const resolvedViewState = viewState ?? defaultCenter;
+
+  /* ── DEBUG: Log resolved map configuration ── */
+  console.log(
+    `%c[ClusterMap] map config`,
+    'color: #2ab06f; font-weight: bold',
+    {
+      resolvedViewState,
+      bubbleDataCount: bubbleData.length,
+      bubbleDataSample: bubbleData.slice(0, 2),
+      showLegend: !mini && !hideLegend,
+    },
+  );
+
+  /* ── DEBUG: Inspect wrapper div and MapView DOM after mount ── */
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      console.warn('[ClusterMap] wrapper ref is null after mount');
+      return;
+    }
+    const rect = wrapper.getBoundingClientRect();
+    console.log(
+      `%c[ClusterMap] wrapper DOM rect`,
+      'color: #ffd54f; font-weight: bold',
+      { width: rect.width, height: rect.height, top: rect.top, left: rect.left },
+    );
+
+    // Find any canvas or deck.gl elements inside
+    const canvases = wrapper.querySelectorAll('canvas');
+    const mapDivs = wrapper.querySelectorAll('[class*="map"], [class*="Map"], [data-testid]');
+    const allChildren = wrapper.querySelectorAll('*');
+    console.log(
+      `%c[ClusterMap] DOM inspection`,
+      'color: #ff8a65; font-weight: bold',
+      {
+        canvasCount: canvases.length,
+        canvasSizes: Array.from(canvases).map((c) => ({ w: c.width, h: c.height, style: c.style.cssText })),
+        mapDivCount: mapDivs.length,
+        totalChildElements: allChildren.length,
+        firstFewChildren: Array.from(allChildren).slice(0, 10).map((el) => ({
+          tag: el.tagName,
+          className: el.className?.toString?.()?.substring(0, 60),
+          style: (el as HTMLElement).style?.cssText?.substring(0, 100),
+          rect: el.getBoundingClientRect(),
+        })),
+      },
+    );
+
+    // Check for zero-size containers that might hide the map
+    Array.from(allChildren).forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) {
+        console.warn(
+          `[ClusterMap] zero-size element #${i}`,
+          el.tagName,
+          el.className?.toString?.()?.substring(0, 40),
+          { w: r.width, h: r.height },
+        );
+      }
+    });
+  });
+
+  /* ── DEBUG: Log MapView import to verify strato-geo loaded ── */
+  useEffect(() => {
+    console.log(
+      `%c[ClusterMap] strato-geo imports`,
+      'color: #b388ff; font-weight: bold',
+      {
+        MapView: typeof MapView,
+        MapViewStr: String(MapView),
+        BubbleLayer: typeof BubbleLayer,
+        CategoricalLegend: typeof CategoricalLegend,
+      },
+    );
+  }, []);
 
   return (
     <div
+      ref={wrapperRef}
       style={{
         borderRadius: mini
           ? `0 0 ${Borders.Radius.Container.Default} ${Borders.Radius.Container.Default}`
@@ -134,10 +226,9 @@ export const ClusterMap = ({
         borderTop: mini ? `1px solid ${Colors.Border.Neutral.Default}` : undefined,
         overflow: 'hidden',
         position: 'relative',
-        height: typeof height === 'string' ? height : undefined,
       }}
     >
-      <MapView height={height} {...mapProps}>
+      <MapView height={height} initialViewState={resolvedViewState}>
         {bubbleData.length > 0 && (
           <BubbleLayer
             data={bubbleData}

@@ -150,6 +150,23 @@ export const Topology = () => {
   /* Key changes on drill level → ClusterMap re-mounts with new initialViewState */
   const mapKey = `map-${level}-${regionId ?? 'all'}`;
 
+  /* ── DEBUG: Log topology render state ── */
+  console.log(
+    '%c[Topology] render',
+    'color: #ff8a65; font-weight: bold',
+    {
+      demoMode,
+      level,
+      regionId,
+      mapH,
+      mapKey,
+      mapViewState,
+      regionsCount: regions.length,
+      showFlatTopology,
+      windowInnerHeight: typeof window !== 'undefined' ? window.innerHeight : 'N/A',
+    },
+  );
+
   return (
     <div style={{ position: 'relative', overflow: 'hidden', minWidth: 0, height: mapH, contain: 'strict' }}>
       {/* ── PERSISTENT MAP BACKGROUND ── */}
