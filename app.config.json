@@ -2,7 +2,7 @@
   "environmentUrl": "https://bnk46244.apps.dynatrace.com/",
   "app": {
     "name": "Network Observability Console",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "description": "NOC network observability — device health, topology, traffic",
     "id": "my.network.observability.console",
     "scopes": [
@@ -12,7 +12,8 @@
       { "name": "storage:bizevents:read", "comment": "required for bizevent queries" },
       { "name": "environment-api:problems:read", "comment": "required for problems API access" },
       { "name": "environment-api:entities:read", "comment": "required for dt.entity.network:device queries" },
-      { "name": "environment-api:metrics:read", "comment": "required for network device metric queries" }
+      { "name": "environment-api:metrics:read", "comment": "required for network device metric queries" },
+      { "name": "settings:objects:read", "comment": "required for settings/anomaly detector queries" }
     ]
   }
 }
