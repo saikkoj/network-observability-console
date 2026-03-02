@@ -6,15 +6,16 @@ import { DEMO_TOPOLOGY_NODES, DEMO_TOPOLOGY_EDGES } from '../data/demoData';
 import type { TopologyNode, TopologyEdge, DeviceRole, TopologyEdgeType } from '../types/network';
 import { toNum } from '../utils';
 
-/* ── Map Dynatrace device_type → canonical DeviceRole ── */
+/* ── Map Dynatrace entity tags / name → canonical DeviceRole ── */
 function mapDeviceRole(raw: unknown): DeviceRole {
-  const s = String(raw ?? '').toLowerCase();
+  // raw may be a tags array, a string, or null
+  const s = (Array.isArray(raw) ? raw.join(' ') : String(raw ?? '')).toLowerCase();
   if (s.includes('router')) return 'router';
   if (s.includes('switch') || s.includes('catalyst')) return 'switch';
   if (s.includes('firewall') || s.includes('palo') || s.includes('fortinet')) return 'firewall';
   if (s.includes('cloud') || s.includes('gateway') || s.includes('tgw')) return 'cloud-gw';
   if (s.includes('server') || s.includes('host')) return 'server';
-  return 'router'; // default fallback
+  return 'router'; // default fallback for network devices
 }
 
 /* ── Map Dynatrace entity state → health colour ──────── */
@@ -208,16 +209,21 @@ export function useTopologyData(
     if (!nodeRecords) return null;
 
     // Build nodes (without x/y — layout does that)
-    const rawNodes: Omit<TopologyNode, 'x' | 'y'>[] = nodeRecords.map((r: any) => ({
-      id: String(r.id ?? ''),
-      label: String(r.deviceName ?? r['entity.name'] ?? 'Unknown'),
-      role: mapDeviceRole(r.deviceType ?? r.device_type),
-      health: mapHealth(r.state, toNum(r.problems)),
-      ip: String(r.ip ?? ''),
-      type: String(r.deviceType ?? ''),
-      cpu: toNum(r.cpuPct),
-      memory: toNum(r.memPct),
-    }));
+    const rawNodes: Omit<TopologyNode, 'x' | 'y'>[] = nodeRecords.map((r: any) => {
+      const label = String(r.deviceName ?? r['entity.name'] ?? 'Unknown');
+      // Try tags first, then fall back to entity name for role inference
+      const roleHint = r.deviceType ?? r.tags ?? label;
+      return {
+        id: String(r.id ?? ''),
+        label,
+        role: mapDeviceRole(roleHint),
+        health: mapHealth(r.state, toNum(r.problems)),
+        ip: String(r.ip ?? ''),
+        type: Array.isArray(r.deviceType) ? r.deviceType.join(', ') : String(r.deviceType ?? ''),
+        cpu: toNum(r.cpuPct),
+        memory: toNum(r.memPct),
+      };
+    });
 
     const nodeIds = new Set(rawNodes.map((n) => n.id));
 
