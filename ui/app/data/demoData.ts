@@ -209,13 +209,11 @@ export const DEMO_ALERTS: DemoAlert[] = [
 ];
 
 /* ══════════════════════════════════════════════════════
- * FINLAND MAP — Hierarchical cluster data (80 000 entities)
+ * FINLAND MAP — Hierarchical cluster data
  *
- * Projection: equirectangular
- *   x = (lon − 19.0) / 13.0 × 400
- *   y = 750 − (lat − 59.5) / 11.0 × 750
- *
- * viewBox "0 0 400 750"
+ * Demo data uses ~350 entities across 6 regions.
+ * Only Uusimaa and Lappi have site-level drill-down.
+ * The architecture is scalable to 80 000+ entities.
  * ══════════════════════════════════════════════════════ */
 
 function genHealth(total: number, critPct: number, warnPct: number): HealthSummary {
@@ -225,14 +223,7 @@ function genHealth(total: number, critPct: number, warnPct: number): HealthSumma
   return { healthy, warning, critical, unknown: 0 };
 }
 
-export function finlandProject(lon: number, lat: number): [number, number] {
-  return [
-    ((lon - 19.0) / 13.0) * 400,
-    750 - ((lat - 59.5) / 11.0) * 750,
-  ];
-}
-
-/* ── 17 Finnish regions ─── */
+/* ── 6 Finnish regions (drill-down only for Uusimaa & Lappi) ─── */
 interface RegionSeed {
   id: string; label: string; lat: number; lon: number;
   devices: number; critPct: number; warnPct: number; avgCpu: number; avgMem: number; alerts: number;
@@ -240,139 +231,39 @@ interface RegionSeed {
 }
 
 const REGION_SEEDS: RegionSeed[] = [
-  { id: 'uusimaa', label: 'Uusimaa', lat: 60.25, lon: 24.94, devices: 22000, critPct: 0.02, warnPct: 0.06, avgCpu: 48, avgMem: 62, alerts: 28,
+  /* ── Uusimaa (Helsinki area) — drill-down enabled ── */
+  { id: 'uusimaa', label: 'Uusimaa', lat: 60.25, lon: 24.94, devices: 120, critPct: 0.03, warnPct: 0.08, avgCpu: 48, avgMem: 62, alerts: 6,
     sites: [
-      { name: 'Pasila DC', type: 'data-center', share: 0.30 },
-      { name: 'Pitäjänmäki Server Farm', type: 'data-center', share: 0.22 },
-      { name: 'Keilaniemi HQ', type: 'office', share: 0.14 },
-      { name: 'Tikkurila Exchange', type: 'exchange', share: 0.12 },
-      { name: 'Malmi POP', type: 'pop', share: 0.08 },
-      { name: 'Lauttasaari POP', type: 'pop', share: 0.06 },
-      { name: 'Leppävaara Cell Hub', type: 'cell-tower', share: 0.04 },
-      { name: 'Kirkkonummi Exchange', type: 'exchange', share: 0.04 },
+      { name: 'Pasila DC', type: 'data-center', share: 0.35 },
+      { name: 'Keilaniemi HQ', type: 'office', share: 0.25 },
+      { name: 'Tikkurila Exchange', type: 'exchange', share: 0.22 },
+      { name: 'Malmi POP', type: 'pop', share: 0.18 },
     ] },
-  { id: 'pirkanmaa', label: 'Pirkanmaa', lat: 61.50, lon: 23.79, devices: 8500, critPct: 0.03, warnPct: 0.08, avgCpu: 52, avgMem: 65, alerts: 14,
+  /* ── Lappi (Lapland) — drill-down enabled ── */
+  { id: 'lappi', label: 'Lappi', lat: 66.50, lon: 25.72, devices: 65, critPct: 0.06, warnPct: 0.12, avgCpu: 42, avgMem: 55, alerts: 5,
     sites: [
-      { name: 'Hervanta DC', type: 'data-center', share: 0.38 },
-      { name: 'Tampere Central Exchange', type: 'exchange', share: 0.22 },
-      { name: 'Hatanpää Office', type: 'office', share: 0.18 },
-      { name: 'Nokia POP', type: 'pop', share: 0.10 },
-      { name: 'Ylöjärvi Cell Hub', type: 'cell-tower', share: 0.07 },
-      { name: 'Lempäälä POP', type: 'pop', share: 0.05 },
+      { name: 'Rovaniemi DC', type: 'data-center', share: 0.45 },
+      { name: 'Sodankylä Arctic Center', type: 'data-center', share: 0.30 },
+      { name: 'Inari Cell Hub', type: 'cell-tower', share: 0.25 },
     ] },
-  { id: 'varsinais-suomi', label: 'Varsinais-Suomi', lat: 60.45, lon: 22.27, devices: 5200, critPct: 0.01, warnPct: 0.05, avgCpu: 38, avgMem: 50, alerts: 5,
-    sites: [
-      { name: 'Turku DC', type: 'data-center', share: 0.46 },
-      { name: 'Kupittaa Exchange', type: 'exchange', share: 0.23 },
-      { name: 'Raisio POP', type: 'pop', share: 0.14 },
-      { name: 'Salo Exchange', type: 'exchange', share: 0.10 },
-      { name: 'Naantali Cell Hub', type: 'cell-tower', share: 0.07 },
-    ] },
-  { id: 'pohjois-pohjanmaa', label: 'Pohjois-Pohjanmaa', lat: 65.01, lon: 25.47, devices: 6800, critPct: 0.04, warnPct: 0.09, avgCpu: 55, avgMem: 68, alerts: 18,
-    sites: [
-      { name: 'Oulu DC', type: 'data-center', share: 0.44 },
-      { name: 'Liminka Exchange', type: 'exchange', share: 0.20 },
-      { name: 'Raahe POP', type: 'pop', share: 0.13 },
-      { name: 'Kempele Office', type: 'office', share: 0.10 },
-      { name: 'Ylivieska Exchange', type: 'exchange', share: 0.08 },
-      { name: 'Kuusamo POP', type: 'pop', share: 0.05 },
-    ] },
-  { id: 'lappi', label: 'Lappi', lat: 66.50, lon: 25.72, devices: 7000, critPct: 0.05, warnPct: 0.10, avgCpu: 42, avgMem: 55, alerts: 22,
-    sites: [
-      { name: 'Rovaniemi DC', type: 'data-center', share: 0.40 },
-      { name: 'Sodankylä Arctic Center', type: 'data-center', share: 0.23 },
-      { name: 'Tornio Exchange', type: 'exchange', share: 0.14 },
-      { name: 'Kittilä POP', type: 'pop', share: 0.10 },
-      { name: 'Inari Cell Hub', type: 'cell-tower', share: 0.07 },
-      { name: 'Muonio POP', type: 'pop', share: 0.06 },
-    ] },
-  { id: 'keski-suomi', label: 'Keski-Suomi', lat: 62.24, lon: 25.75, devices: 4100, critPct: 0.02, warnPct: 0.07, avgCpu: 44, avgMem: 58, alerts: 6,
-    sites: [
-      { name: 'Jyväskylä DC', type: 'data-center', share: 0.54 },
-      { name: 'Jyväskylä Exchange', type: 'exchange', share: 0.26 },
-      { name: 'Äänekoski POP', type: 'pop', share: 0.20 },
-    ] },
-  { id: 'pohjois-savo', label: 'Pohjois-Savo', lat: 62.89, lon: 27.68, devices: 3800, critPct: 0.01, warnPct: 0.04, avgCpu: 36, avgMem: 48, alerts: 3,
-    sites: [
-      { name: 'Kuopio DC', type: 'data-center', share: 0.53 },
-      { name: 'Kuopio Exchange', type: 'exchange', share: 0.28 },
-      { name: 'Iisalmi POP', type: 'pop', share: 0.19 },
-    ] },
-  { id: 'paijat-hame', label: 'Päijät-Häme', lat: 60.98, lon: 25.66, devices: 3200, critPct: 0.02, warnPct: 0.06, avgCpu: 41, avgMem: 55, alerts: 5,
-    sites: [
-      { name: 'Lahti DC', type: 'data-center', share: 0.50 },
-      { name: 'Lahti Exchange', type: 'exchange', share: 0.31 },
-      { name: 'Heinola POP', type: 'pop', share: 0.19 },
-    ] },
-  { id: 'pohjanmaa', label: 'Pohjanmaa', lat: 63.10, lon: 21.62, devices: 2800, critPct: 0.02, warnPct: 0.05, avgCpu: 35, avgMem: 47, alerts: 3,
-    sites: [
-      { name: 'Vaasa DC', type: 'data-center', share: 0.50 },
-      { name: 'Vaasa Exchange', type: 'exchange', share: 0.29 },
-      { name: 'Seinäjoki POP', type: 'pop', share: 0.21 },
-    ] },
-  { id: 'pohjois-karjala', label: 'Pohjois-Karjala', lat: 62.60, lon: 29.76, devices: 2400, critPct: 0.03, warnPct: 0.07, avgCpu: 40, avgMem: 52, alerts: 4,
-    sites: [
-      { name: 'Joensuu DC', type: 'data-center', share: 0.54 },
-      { name: 'Joensuu Exchange', type: 'exchange', share: 0.29 },
-      { name: 'Lieksa POP', type: 'pop', share: 0.17 },
-    ] },
-  { id: 'etela-karjala', label: 'Etelä-Karjala', lat: 61.06, lon: 28.19, devices: 2100, critPct: 0.01, warnPct: 0.05, avgCpu: 34, avgMem: 46, alerts: 2,
-    sites: [
-      { name: 'Lappeenranta DC', type: 'data-center', share: 0.52 },
-      { name: 'Imatra Exchange', type: 'exchange', share: 0.30 },
-      { name: 'Joutseno POP', type: 'pop', share: 0.18 },
-    ] },
-  { id: 'kymenlaakso', label: 'Kymenlaakso', lat: 60.87, lon: 26.70, devices: 1900, critPct: 0.02, warnPct: 0.06, avgCpu: 37, avgMem: 50, alerts: 3,
-    sites: [
-      { name: 'Kouvola DC', type: 'data-center', share: 0.53 },
-      { name: 'Kotka Exchange', type: 'exchange', share: 0.30 },
-      { name: 'Hamina POP', type: 'pop', share: 0.17 },
-    ] },
-  { id: 'kanta-hame', label: 'Kanta-Häme', lat: 61.00, lon: 24.44, devices: 2500, critPct: 0.01, warnPct: 0.04, avgCpu: 32, avgMem: 44, alerts: 2,
-    sites: [
-      { name: 'Hämeenlinna DC', type: 'data-center', share: 0.52 },
-      { name: 'Hämeenlinna Exchange', type: 'exchange', share: 0.28 },
-      { name: 'Riihimäki POP', type: 'pop', share: 0.20 },
-    ] },
-  { id: 'satakunta', label: 'Satakunta', lat: 61.49, lon: 21.80, devices: 2300, critPct: 0.02, warnPct: 0.05, avgCpu: 36, avgMem: 49, alerts: 3,
-    sites: [
-      { name: 'Pori DC', type: 'data-center', share: 0.52 },
-      { name: 'Rauma Exchange', type: 'exchange', share: 0.30 },
-      { name: 'Ulvila POP', type: 'pop', share: 0.18 },
-    ] },
-  { id: 'etela-savo', label: 'Etelä-Savo', lat: 61.69, lon: 27.27, devices: 1800, critPct: 0.01, warnPct: 0.04, avgCpu: 30, avgMem: 42, alerts: 1,
-    sites: [
-      { name: 'Mikkeli DC', type: 'data-center', share: 0.56 },
-      { name: 'Savonlinna Exchange', type: 'exchange', share: 0.28 },
-      { name: 'Pieksämäki POP', type: 'pop', share: 0.16 },
-    ] },
-  { id: 'kainuu', label: 'Kainuu', lat: 64.23, lon: 27.73, devices: 1600, critPct: 0.03, warnPct: 0.08, avgCpu: 46, avgMem: 60, alerts: 4,
-    sites: [
-      { name: 'Kajaani DC', type: 'data-center', share: 0.56 },
-      { name: 'Kajaani Exchange', type: 'exchange', share: 0.28 },
-      { name: 'Sotkamo POP', type: 'pop', share: 0.16 },
-    ] },
-  { id: 'etela-pohjanmaa', label: 'Etelä-Pohjanmaa', lat: 62.79, lon: 22.84, devices: 2000, critPct: 0.02, warnPct: 0.05, avgCpu: 38, avgMem: 50, alerts: 3,
-    sites: [
-      { name: 'Seinäjoki DC', type: 'data-center', share: 0.50 },
-      { name: 'Seinäjoki Exchange', type: 'exchange', share: 0.30 },
-      { name: 'Kauhajoki POP', type: 'pop', share: 0.20 },
-    ] },
+  /* ── Other regions — map markers only, no drill-down ── */
+  { id: 'pirkanmaa', label: 'Pirkanmaa', lat: 61.50, lon: 23.79, devices: 55, critPct: 0.04, warnPct: 0.09, avgCpu: 52, avgMem: 65, alerts: 3, sites: [] },
+  { id: 'varsinais-suomi', label: 'Varsinais-Suomi', lat: 60.45, lon: 22.27, devices: 42, critPct: 0.02, warnPct: 0.05, avgCpu: 38, avgMem: 50, alerts: 1, sites: [] },
+  { id: 'pohjois-pohjanmaa', label: 'Pohjois-Pohjanmaa', lat: 65.01, lon: 25.47, devices: 48, critPct: 0.04, warnPct: 0.10, avgCpu: 55, avgMem: 68, alerts: 4, sites: [] },
+  { id: 'keski-suomi', label: 'Keski-Suomi', lat: 62.24, lon: 25.75, devices: 30, critPct: 0.03, warnPct: 0.07, avgCpu: 44, avgMem: 58, alerts: 1, sites: [] },
 ];
 
 /* Build exported arrays */
-export const DEMO_REGIONS: TopologyCluster[] = REGION_SEEDS.map((r) => {
-  const [x, y] = finlandProject(r.lon, r.lat);
-  return {
-    id: r.id, label: r.label, x, y, lat: r.lat, lon: r.lon,
-    deviceCount: r.devices,
-    healthSummary: genHealth(r.devices, r.critPct, r.warnPct),
-    avgCpu: r.avgCpu, avgMemory: r.avgMem, alertCount: r.alerts,
-  };
-});
+export const DEMO_REGIONS: TopologyCluster[] = REGION_SEEDS.map((r) => ({
+  id: r.id, label: r.label, x: 0, y: 0, lat: r.lat, lon: r.lon,
+  deviceCount: r.devices,
+  healthSummary: genHealth(r.devices, r.critPct, r.warnPct),
+  avgCpu: r.avgCpu, avgMemory: r.avgMem, alertCount: r.alerts,
+}));
 
 export const DEMO_SITES: Record<string, TopologySite[]> = {};
 for (const r of REGION_SEEDS) {
+  if (r.sites.length === 0) continue;              // skip regions without drill-down
   DEMO_SITES[r.id] = r.sites.map((s, i) => {
     const devCount = Math.round(r.devices * s.share);
     const critVar = Math.max(0, r.critPct + (i % 3 === 0 ? 0.02 : -0.005));
@@ -389,31 +280,6 @@ for (const r of REGION_SEEDS) {
 }
 
 export const DEMO_TOTAL_ENTITIES = DEMO_REGIONS.reduce((s, r) => s + r.deviceCount, 0);
-
-/* ── Finland SVG outline (simplified, viewBox 0 0 400 750) ─── */
-export const FINLAND_OUTLINE: [number, number][] = [
-  [246, 34],
-  [277, 46], [308, 78], [323, 107], [332, 141],
-  [338, 178], [323, 210], [338, 244], [338, 278],
-  [350, 312], [323, 346], [338, 380], [338, 414],
-  [354, 448], [369, 478], [354, 512], [340, 540],
-  [323, 570], [308, 595], [292, 618],
-  [270, 640], [246, 660], [215, 678], [185, 690],
-  [162, 696], [138, 700], [108, 696], [92, 700],
-  [78, 710], [120, 730],
-  [92, 720], [72, 700], [62, 680], [68, 656],
-  [78, 636], [72, 612], [64, 590], [62, 565],
-  [70, 540], [76, 518], [68, 498], [62, 478],
-  [70, 458], [80, 438], [92, 414],
-  [108, 388], [122, 364], [145, 340],
-  [155, 318], [160, 295], [158, 272],
-  [148, 248], [142, 220], [138, 192],
-  [132, 170], [118, 150], [92, 128],
-  [62, 108], [48, 98],
-  [56, 88], [78, 78], [108, 72],
-  [138, 62], [170, 52], [200, 42], [220, 38],
-  [246, 34],
-];
 
 /* ── Generate synthetic topology for a site ─── */
 const HEALTH_VALS: Array<TopologyNode['health']> = ['healthy', 'healthy', 'healthy', 'warning', 'critical'];

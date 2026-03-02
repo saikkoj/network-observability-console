@@ -159,7 +159,8 @@ export const Topology = () => {
             <Flex flexDirection="column" gap={2} style={{ flex: 1 }}>
               <Heading level={4} style={{ margin: 0 }}>{currentRegion.label}</Heading>
               <Paragraph style={{ fontSize: 11, opacity: 0.6 }}>
-                {currentRegion.deviceCount.toLocaleString()} entities across {currentSites.length} sites
+                {currentRegion.deviceCount.toLocaleString()} entities
+                {currentSites.length > 0 && ` across ${currentSites.length} sites`}
               </Paragraph>
             </Flex>
             <Flex gap={16}>
@@ -181,18 +182,41 @@ export const Topology = () => {
             </div>
           </Flex>
 
-          {/* Site cards grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 16,
-            }}
-          >
-            {currentSites.map((site) => (
-              <SiteCard key={site.id} site={site} onClick={() => drillToSite(site.id)} />
-            ))}
-          </div>
+          {/* Site cards grid — or placeholder if no sites in demo data */}
+          {currentSites.length > 0 ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: 16,
+              }}
+            >
+              {currentSites.map((site) => (
+                <SiteCard key={site.id} site={site} onClick={() => drillToSite(site.id)} />
+              ))}
+            </div>
+          ) : (
+            <Flex
+              alignItems="center"
+              justifyContent="center"
+              flexDirection="column"
+              gap={8}
+              style={{
+                padding: 48,
+                background: Colors.Background.Surface.Default,
+                borderRadius: Borders.Radius.Container.Default,
+                border: `1px solid ${Colors.Border.Neutral.Default}`,
+                opacity: 0.7,
+              }}
+            >
+              <Paragraph style={{ fontSize: 14 }}>
+                No site-level data available for this region.
+              </Paragraph>
+              <Paragraph style={{ fontSize: 12, opacity: 0.6 }}>
+                In live mode, sites are discovered automatically from management zones and entity relationships.
+              </Paragraph>
+            </Flex>
+          )}
         </>
       )}
 

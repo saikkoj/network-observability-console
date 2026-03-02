@@ -1,7 +1,7 @@
 /**
  * FinlandMap — Strato MapView with BubbleLayer for regional cluster markers.
  *
- * Supports 80 000+ entities via hierarchical clustering.
+ * Scalable architecture supports 80 000+ entities via hierarchical clustering.
  * Each region is a bubble sized by deviceCount and coloured by health.
  * Uses @dynatrace/strato-geo MapView + BubbleLayer.
  */
@@ -56,7 +56,6 @@ interface FinlandMapProps {
   onRegionClick?: (regionId: string) => void;
   height?: number | string;
   mini?: boolean;
-  totalEntities?: number;
 }
 
 /* ── Finland centre coordinates & zoom ── */
