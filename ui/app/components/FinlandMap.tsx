@@ -1,17 +1,17 @@
 /**
- * FinlandMap — SVG-based Finland map with interactive regional cluster markers.
+ * FinlandMap — Strato MapView with BubbleLayer for regional cluster markers.
  *
  * Supports 80 000+ entities via hierarchical clustering.
- * Each region is a circle sized by sqrt(deviceCount) and coloured by health.
+ * Each region is a bubble sized by deviceCount and coloured by health.
+ * Uses @dynatrace/strato-geo MapView + BubbleLayer.
  */
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Paragraph } from '@dynatrace/strato-components/typography';
-import Colors from '@dynatrace/strato-design-tokens/colors';
-import Borders from '@dynatrace/strato-design-tokens/borders';
-import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
+import { Button } from '@dynatrace/strato-components/buttons';
+import { MapView, BubbleLayer, CategoricalLegend } from '@dynatrace/strato-geo';
+import type { BubbleLayerTooltipData } from '@dynatrace/strato-geo';
 import type { TopologyCluster, HealthSummary } from '../types/network';
-import { FINLAND_OUTLINE } from '../data/demoData';
 
 /* ── Health → colour mapping ── */
 function clusterColor(hs: HealthSummary): string {
@@ -19,22 +19,20 @@ function clusterColor(hs: HealthSummary): string {
   if (total === 0) return '#555';
   const critRatio = hs.critical / total;
   const warnRatio = hs.warning / total;
-  if (critRatio > 0.04) return '#dc172a'; // red
-  if (warnRatio > 0.08) return '#fd8232'; // amber
-  return '#2ab06f';                        // green
+  if (critRatio > 0.04) return 'var(--dt-colors-charts-status-critical-default, #dc172a)';
+  if (warnRatio > 0.08) return 'var(--dt-colors-charts-status-warning-default, #fd8232)';
+  return 'var(--dt-colors-charts-status-success-default, #2ab06f)';
 }
 
-function clusterGlow(hs: HealthSummary): string {
-  const c = clusterColor(hs);
-  return `0 0 14px 3px ${c}55, 0 0 6px 1px ${c}33`;
-}
-
-/* ── Bubble radius from device count (sqrt scale) ── */
-const MIN_R = 8;
-const MAX_R = 36;
-function bubbleRadius(count: number, maxCount: number): number {
-  if (maxCount <= 0) return MIN_R;
-  return MIN_R + (MAX_R - MIN_R) * Math.sqrt(count / maxCount);
+/* ── Health label for legend ── */
+function healthLabel(hs: HealthSummary): string {
+  const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
+  if (total === 0) return 'Unknown';
+  const critRatio = hs.critical / total;
+  const warnRatio = hs.warning / total;
+  if (critRatio > 0.04) return 'Critical';
+  if (warnRatio > 0.08) return 'Warning';
+  return 'Healthy';
 }
 
 /* ── Format large numbers ── */
@@ -43,84 +41,112 @@ function fmtCount(n: number): string {
   return String(n);
 }
 
-/* ── Tooltip ── */
-const TIP_W = 240;
-function Tooltip({ cluster, x, y }: { cluster: TopologyCluster; x: number; y: number }) {
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
-  let left = x + 16;
-  let top = y - 8;
-  if (left + TIP_W > vw - 8) left = x - TIP_W - 16;
-  if (top + 200 > vh - 8) top = vh - 208;
-  if (top < 8) top = 8;
-  if (left < 8) left = 8;
-
-  const hs = cluster.healthSummary;
-  const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
-
-  return (
-    <div
-      style={{
-        position: 'fixed', left, top, zIndex: 99999, pointerEvents: 'none',
-        background: 'rgba(15,17,22,0.96)', border: '1px solid rgba(255,255,255,0.14)',
-        borderRadius: 8, padding: '12px 16px', fontSize: 12, lineHeight: 1.7,
-        minWidth: TIP_W, maxWidth: 300, color: '#fff',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-      }}
-    >
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{cluster.label}</div>
-      <div>Entities: <b>{cluster.deviceCount.toLocaleString()}</b></div>
-      <div style={{ display: 'flex', gap: 12, margin: '6px 0' }}>
-        <span style={{ color: '#2ab06f' }}>● {hs.healthy.toLocaleString()} healthy</span>
-        <span style={{ color: '#fd8232' }}>● {hs.warning.toLocaleString()} warning</span>
-        <span style={{ color: '#dc172a' }}>● {hs.critical.toLocaleString()} critical</span>
-      </div>
-      {/* Mini health bar */}
-      <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
-        <div style={{ width: `${(hs.healthy / total) * 100}%`, background: '#2ab06f' }} />
-        <div style={{ width: `${(hs.warning / total) * 100}%`, background: '#fd8232' }} />
-        <div style={{ width: `${(hs.critical / total) * 100}%`, background: '#dc172a' }} />
-      </div>
-      {cluster.avgCpu !== undefined && <div>Avg CPU: {cluster.avgCpu}%</div>}
-      {cluster.avgMemory !== undefined && <div>Avg Memory: {cluster.avgMemory}%</div>}
-      <div>Active Alerts: <span style={{ color: cluster.alertCount > 10 ? '#dc172a' : '#fd8232', fontWeight: 600 }}>{cluster.alertCount}</span></div>
-      <div style={{ marginTop: 6, opacity: 0.6, fontSize: 10 }}>Click to drill down →</div>
-    </div>
-  );
-}
-
-/* ── Finland outline path string ── */
-const outlinePath = useMemoOutline();
-function useMemoOutline(): string {
-  if (FINLAND_OUTLINE.length === 0) return '';
-  return FINLAND_OUTLINE.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x},${y}`).join(' ') + ' Z';
+/* ── Bubble data shape for BubbleLayer ── */
+interface RegionBubble {
+  latitude: number;
+  longitude: number;
+  deviceCount: number;
+  cluster: TopologyCluster;
+  healthStatus: string;
 }
 
 /* ── Props ── */
 interface FinlandMapProps {
   regions: TopologyCluster[];
   onRegionClick?: (regionId: string) => void;
-  height?: number;
+  height?: number | string;
   mini?: boolean;
   totalEntities?: number;
 }
+
+/* ── Finland centre coordinates & zoom ── */
+const FINLAND_CENTER = { latitude: 64.5, longitude: 26.0 };
+const FINLAND_ZOOM_FULL = 4.6;
+const FINLAND_ZOOM_MINI = 3.8;
 
 export const FinlandMap = ({
   regions,
   onRegionClick,
   height = 600,
   mini = false,
-  totalEntities,
 }: FinlandMapProps) => {
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [tipPos, setTipPos] = useState({ x: 0, y: 0 });
+  /* Transform cluster data into BubbleLayer format */
+  const bubbleData = useMemo<RegionBubble[]>(
+    () =>
+      regions.map((r) => ({
+        latitude: r.lat,
+        longitude: r.lon,
+        deviceCount: r.deviceCount,
+        cluster: r,
+        healthStatus: healthLabel(r.healthSummary),
+      })),
+    [regions],
+  );
 
-  const maxCount = useMemo(() => Math.max(...regions.map(r => r.deviceCount), 1), [regions]);
-  const hoveredCluster = useMemo(() => regions.find(r => r.id === hovered) ?? null, [regions, hovered]);
+  /* Colour accessor for each bubble */
+  const colorAccessor = useCallback(
+    (item: RegionBubble) => clusterColor(item.cluster.healthSummary),
+    [],
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    setTipPos({ x: e.clientX, y: e.clientY });
-  }, []);
+  /* Radius accessor — returns device count; BubbleLayer scales it with radiusRange */
+  const radiusAccessor = useCallback((item: RegionBubble) => item.deviceCount, []);
+
+  /* Custom tooltip renderer */
+  const renderTooltip = useCallback(
+    (closest: BubbleLayerTooltipData<RegionBubble>): ReactNode => {
+      const c = closest.data.cluster;
+      const hs = c.healthSummary;
+      const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
+
+      return (
+        <Flex flexDirection="column" gap={4} style={{ minWidth: 200, padding: 4 }}>
+          <div style={{ fontWeight: 700, fontSize: 13 }}>{c.label}</div>
+          <div style={{ fontSize: 12 }}>
+            Entities: <b>{c.deviceCount.toLocaleString()}</b>
+          </div>
+          <Flex gap={12} style={{ fontSize: 11 }}>
+            <span style={{ color: 'var(--dt-colors-charts-status-success-default, #2ab06f)' }}>
+              ● {hs.healthy.toLocaleString()} healthy
+            </span>
+            <span style={{ color: 'var(--dt-colors-charts-status-warning-default, #fd8232)' }}>
+              ● {hs.warning.toLocaleString()} warning
+            </span>
+            <span style={{ color: 'var(--dt-colors-charts-status-critical-default, #dc172a)' }}>
+              ● {hs.critical.toLocaleString()} critical
+            </span>
+          </Flex>
+          {/* Mini health bar */}
+          {total > 0 && (
+            <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ width: `${(hs.healthy / total) * 100}%`, background: 'var(--dt-colors-charts-status-success-default, #2ab06f)' }} />
+              <div style={{ width: `${(hs.warning / total) * 100}%`, background: 'var(--dt-colors-charts-status-warning-default, #fd8232)' }} />
+              <div style={{ width: `${(hs.critical / total) * 100}%`, background: 'var(--dt-colors-charts-status-critical-default, #dc172a)' }} />
+            </div>
+          )}
+          {c.avgCpu !== undefined && (
+            <div style={{ fontSize: 11 }}>Avg CPU: {c.avgCpu}%</div>
+          )}
+          {c.avgMemory !== undefined && (
+            <div style={{ fontSize: 11 }}>Avg Memory: {c.avgMemory}%</div>
+          )}
+          <div style={{ fontSize: 11 }}>
+            Alerts: <b>{c.alertCount}</b>
+          </div>
+          {onRegionClick && (
+            <Button
+              variant="accent"
+              onClick={() => onRegionClick(c.id)}
+              style={{ marginTop: 4 }}
+            >
+              Drill Down →
+            </Button>
+          )}
+        </Flex>
+      );
+    },
+    [onRegionClick],
+  );
 
   if (regions.length === 0) {
     return (
@@ -131,167 +157,36 @@ export const FinlandMap = ({
   }
 
   return (
-    <>
-      <div
-        style={{
-          position: 'relative',
-          background: Colors.Background.Surface.Default,
-          borderRadius: mini ? 8 : Borders.Radius.Container.Default,
-          border: `1px solid ${Colors.Border.Neutral.Default}`,
-          boxShadow: mini ? 'none' : BoxShadows.Surface.Raised.Rest,
-          overflow: 'hidden',
-          height,
-        }}
-        onMouseMove={handleMouseMove}
+    <MapView
+      height={height}
+      initialViewState={{
+        latitude: FINLAND_CENTER.latitude,
+        longitude: FINLAND_CENTER.longitude,
+        zoom: mini ? FINLAND_ZOOM_MINI : FINLAND_ZOOM_FULL,
+      }}
+    >
+      <BubbleLayer
+        data={bubbleData}
+        color={colorAccessor}
+        scale="log"
+        radius={radiusAccessor}
+        radiusRange={mini ? [6, 24] : [10, 40]}
+        sizeInterpolation="fixed"
       >
-        {/* Total entity badge (full mode) */}
-        {!mini && totalEntities != null && (
-          <div
-            style={{
-              position: 'absolute', top: 14, right: 18, zIndex: 10,
-              background: 'rgba(15,17,22,0.88)', borderRadius: 8,
-              padding: '8px 16px', fontSize: 11,
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 22, letterSpacing: -0.5, color: '#73b1ff' }}>
-              {totalEntities.toLocaleString()}
-            </div>
-            <div style={{ opacity: 0.6, fontSize: 10 }}>Monitored Entities</div>
-          </div>
-        )}
+        <BubbleLayer.Tooltip>
+          {(closest) => renderTooltip(closest as BubbleLayerTooltipData<RegionBubble>)}
+        </BubbleLayer.Tooltip>
+      </BubbleLayer>
 
-        {/* Legend (full mode) */}
-        {!mini && (
-          <div
-            style={{
-              position: 'absolute', top: 14, left: 16, zIndex: 10,
-              background: 'rgba(15,17,22,0.88)', borderRadius: 8,
-              padding: '8px 14px', fontSize: 10, lineHeight: 1.8,
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 2 }}>Cluster Health</div>
-            {[
-              { label: 'Healthy', color: '#2ab06f' },
-              { label: 'Warning', color: '#fd8232' },
-              { label: 'Critical', color: '#dc172a' },
-            ].map(({ label, color }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}55` }} />
-                {label}
-              </div>
-            ))}
-            <div style={{ marginTop: 4, opacity: 0.5 }}>Size = entity count</div>
-          </div>
-        )}
-
-        <svg
-          width="100%"
-          height="100%"
-          viewBox="-20 -10 440 770"
-          preserveAspectRatio="xMidYMid meet"
-          style={{ display: 'block' }}
-        >
-          {/* Subtle grid */}
-          <defs>
-            <pattern id="fi-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(115,177,255,0.04)" strokeWidth="0.5" />
-            </pattern>
-            {/* Glow filter for critical clusters */}
-            <filter id="glow-red">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id="glow-green">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-
-          <rect x="-20" y="-10" width="440" height="770" fill="url(#fi-grid)" />
-
-          {/* Finland outline */}
-          <path
-            d={outlinePath}
-            fill="rgba(115,177,255,0.05)"
-            stroke="rgba(115,177,255,0.25)"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-
-          {/* Region cluster markers */}
-          {regions.map((region) => {
-            const r = bubbleRadius(region.deviceCount, maxCount);
-            const col = clusterColor(region.healthSummary);
-            const isHovered = hovered === region.id;
-            const scale = isHovered ? 1.15 : 1;
-
-            return (
-              <g
-                key={region.id}
-                transform={`translate(${region.x}, ${region.y}) scale(${scale})`}
-                style={{ cursor: 'pointer', transition: 'transform 0.12s ease' }}
-                onMouseEnter={() => setHovered(region.id)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => onRegionClick?.(region.id)}
-              >
-                {/* Outer glow ring */}
-                <circle
-                  cx={0} cy={0} r={r + 4}
-                  fill="none"
-                  stroke={col}
-                  strokeWidth={1}
-                  strokeOpacity={isHovered ? 0.6 : 0.2}
-                  style={{ transition: 'stroke-opacity 0.15s ease' }}
-                />
-                {/* Main bubble */}
-                <circle
-                  cx={0} cy={0} r={r}
-                  fill={col}
-                  fillOpacity={isHovered ? 0.85 : 0.65}
-                  stroke={isHovered ? '#fff' : col}
-                  strokeWidth={isHovered ? 2 : 1}
-                  filter={region.healthSummary.critical > region.deviceCount * 0.04 ? 'url(#glow-red)' : undefined}
-                  style={{ transition: 'fill-opacity 0.15s ease, stroke-width 0.15s ease' }}
-                />
-                {/* Device count label */}
-                {!mini && (
-                  <text
-                    textAnchor="middle"
-                    dy={r > 16 ? 4 : 3}
-                    fill="#fff"
-                    fontSize={r > 20 ? 11 : 9}
-                    fontWeight={700}
-                    pointerEvents="none"
-                    style={{ textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}
-                  >
-                    {fmtCount(region.deviceCount)}
-                  </text>
-                )}
-                {/* Region name below */}
-                {!mini && (
-                  <text
-                    textAnchor="middle"
-                    y={r + 14}
-                    fill="rgba(255,255,255,0.7)"
-                    fontSize={9}
-                    fontWeight={600}
-                    pointerEvents="none"
-                  >
-                    {region.label}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Tooltip */}
-      {!mini && hoveredCluster && (
-        <Tooltip cluster={hoveredCluster} x={tipPos.x} y={tipPos.y} />
+      {!mini && (
+        <CategoricalLegend
+          colorPalette={{
+            Healthy: 'var(--dt-colors-charts-status-success-default, #2ab06f)',
+            Warning: 'var(--dt-colors-charts-status-warning-default, #fd8232)',
+            Critical: 'var(--dt-colors-charts-status-critical-default, #dc172a)',
+          }}
+        />
       )}
-    </>
+    </MapView>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { Button } from '@dynatrace/strato-components/buttons';
+import { Link } from '@dynatrace/strato-components/typography';
 import { FinlandMap } from '../components/FinlandMap';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
@@ -105,12 +106,9 @@ export const Topology = () => {
             <React.Fragment key={i}>
               {i > 0 && <span style={{ opacity: 0.4, margin: '0 4px' }}>›</span>}
               {c.action ? (
-                <span
-                  onClick={c.action}
-                  style={{ color: '#73b1ff', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}
-                >
+                <Link onClick={c.action} style={{ cursor: 'pointer' }}>
                   {c.label}
-                </span>
+                </Link>
               ) : (
                 <span style={{ opacity: 0.7, fontWeight: 600 }}>{c.label}</span>
               )}
@@ -125,7 +123,6 @@ export const Topology = () => {
           regions={regions}
           onRegionClick={drillToRegion}
           height={640}
-          totalEntities={totalEntities}
         />
       )}
 

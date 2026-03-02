@@ -175,27 +175,22 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
         return (
           <Flex gap={2} alignItems="center" style={{ flexWrap: 'nowrap' }}>
             {ROW_ACTIONS.map((ra) => (
-              <button
+              <Button
                 key={ra.type}
-                title={ra.tip}
-                onClick={(e) => {
+                variant="default"
+                onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
                   setSelectedRowAction(buildRowAction(ra.type, alert));
                 }}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 2,
-                  padding: '2px 5px', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 4, background: 'rgba(255,255,255,0.03)',
-                  cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                  color: 'inherit', fontFamily: 'inherit', whiteSpace: 'nowrap',
-                  transition: 'background 0.15s',
+                  padding: '2px 6px',
+                  fontSize: 10,
+                  whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(99,102,241,0.12)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
               >
                 <span style={{ fontSize: 11 }}>{ra.icon}</span>
                 {ra.label}
-              </button>
+              </Button>
             ))}
           </Flex>
         );

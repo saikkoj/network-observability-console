@@ -9,24 +9,7 @@ import { NOC_PRIMARY_ACTIONS, NOC_SECONDARY_ACTIONS } from '../data/networkCateg
 import { ActionModal } from './ActionModal';
 import type { NetworkAction } from '../types/network';
 
-/* ── Button color mapping by actionSeverity ─────────── */
-const ACTION_STYLES: Record<string, React.CSSProperties> = {
-  primary: {
-    background: 'rgba(99, 102, 241, 0.12)',
-    color: '#818cf8',
-    borderColor: 'rgba(99, 102, 241, 0.30)',
-  },
-  danger: {
-    background: 'rgba(220, 23, 42, 0.10)',
-    color: '#dc172a',
-    borderColor: 'rgba(220, 23, 42, 0.25)',
-  },
-  secondary: {
-    background: 'rgba(255, 255, 255, 0.04)',
-    color: 'inherit',
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-  },
-};
+/* ── Button variant mapping by actionSeverity ─────────── */
 
 const ActionButton = ({
   action,
@@ -38,36 +21,21 @@ const ActionButton = ({
   compact?: boolean;
 }) => {
   const severity = action.actionSeverity ?? 'secondary';
-  const style = ACTION_STYLES[severity] ?? ACTION_STYLES.secondary;
+  const variant = severity === 'danger' ? 'emphasized' : severity === 'primary' ? 'accent' : 'default';
 
   return (
-    <button
+    <Button
+      variant={variant}
       onClick={onClick}
-      title={action.description}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: compact ? '5px 10px' : '7px 14px',
-        borderRadius: 6,
-        border: `1px solid ${style.borderColor}`,
-        background: style.background,
-        color: style.color,
-        cursor: 'pointer',
         fontSize: compact ? 11 : 12,
-        fontWeight: 600,
-        fontFamily: 'inherit',
+        padding: compact ? '5px 10px' : '7px 14px',
         whiteSpace: 'nowrap',
-        transition: 'opacity 0.15s, transform 0.1s',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-      onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.97)'; }}
-      onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
     >
       <span style={{ fontSize: compact ? 13 : 15 }}>{action.icon}</span>
       {action.label}
-    </button>
+    </Button>
   );
 };
 

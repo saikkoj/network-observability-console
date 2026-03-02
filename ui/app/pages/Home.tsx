@@ -175,7 +175,7 @@ export const Home = () => {
                 {totalEntities > 0 ? `${totalEntities.toLocaleString()} entities` : 'View full map'} →
               </Link>
             </Flex>
-            <FinlandMap regions={regions} height={260} mini totalEntities={totalEntities} />
+            <FinlandMap regions={regions} height={260} mini />
           </Flex>
 
           {/* Trend chart */}
