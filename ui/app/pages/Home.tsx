@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { TimeseriesChart } from '@dynatrace/strato-components-preview/charts';
@@ -80,8 +80,9 @@ export const Home = () => {
   const warningCount = categoryStatusItems.filter((c) => c.severity === 'warning').length;
   const healthyCount = categoryStatusItems.filter((c) => c.severity === 'healthy').length;
 
-  /* ── Cluster data (Finland map) ──── */
+  /* ── Cluster data (map) ──── */
   const { regions, totalEntities } = useClusterData();
+  const navigate = useNavigate();
 
   /* ── Global trend chart ──── */
   const chartResult = useDql(
@@ -174,7 +175,14 @@ export const Home = () => {
                 {totalEntities > 0 ? `${totalEntities.toLocaleString()} entities` : 'View full map'} →
               </Link>
             </Flex>
-            <ClusterMap regions={regions} height={260} mini />
+            <ClusterMap
+              regions={regions}
+              height={260}
+              mini
+              onRegionClick={(regionId) =>
+                navigate('/topology', { state: { regionId } })
+              }
+            />
           </div>
 
           {/* Trend chart */}

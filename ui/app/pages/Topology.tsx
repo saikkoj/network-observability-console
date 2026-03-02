@@ -1,8 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { Button } from '@dynatrace/strato-components/buttons';
 import { Link } from '@dynatrace/strato-components/typography';
+import { Tabs, Tab } from '@dynatrace/strato-components-preview/navigation';
+import { HoneycombChart } from '@dynatrace/strato-components-preview/charts';
 import { ClusterMap } from '../components/ClusterMap';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
@@ -12,7 +15,7 @@ import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 import { modeBadgeStyle } from '../utils';
-import type { DrillDownLevel, TopologySite, HealthSummary } from '../types/network';
+import type { DrillDownLevel, TopologySite, TopologyNode, HealthSummary } from '../types/network';
 
 /* ── Site type icons ── */
 const SITE_ICON: Record<string, string> = {
@@ -41,12 +44,28 @@ function worstHealth(hs: HealthSummary): string {
 
 export const Topology = () => {
   const { demoMode } = useDemoMode();
+  const location = useLocation();
   const { regions, totalEntities, getSitesForRegion, getSiteTopology, getRegion } = useClusterData();
 
   /* drill-down state */
   const [level, setLevel] = useState<DrillDownLevel>('country');
   const [regionId, setRegionId] = useState<string | null>(null);
   const [siteId, setSiteId] = useState<string | null>(null);
+
+  /* Auto-drill into a region if navigated from mini-map */
+  useEffect(() => {
+    const navState = location.state as { regionId?: string } | null;
+    if (navState?.regionId && regions.length > 0) {
+      const targetRegion = getRegion(navState.regionId);
+      if (targetRegion) {
+        setRegionId(navState.regionId);
+        setSiteId(null);
+        setLevel('region');
+      }
+      /* Clear nav state so refresh doesn't re-drill */
+      window.history.replaceState({}, '');
+    }
+  }, [location.state, regions, getRegion]);
 
   /* live topology for non-drill-down fallback */
   const liveTopology = useTopologyData(960, 600);
@@ -220,7 +239,7 @@ export const Topology = () => {
         </>
       )}
 
-      {/* ── SITE LEVEL: Device topology ── */}
+      {/* ── SITE LEVEL: Device topology + Smartscape ── */}
       {level === 'site' && currentSite && siteTopology && (
         <>
           {/* Site header */}
@@ -262,16 +281,89 @@ export const Topology = () => {
             </div>
           </Flex>
 
-          <TopologyMap
-            nodes={siteTopology.nodes}
-            edges={siteTopology.edges}
-            height={540}
-          />
+          {/* Tabbed views: Smartscape (HoneycombChart) + Topology Graph */}
+          <div
+            style={{
+              background: Colors.Background.Surface.Default,
+              borderRadius: Borders.Radius.Container.Default,
+              border: `1px solid ${Colors.Border.Neutral.Default}`,
+              boxShadow: BoxShadows.Surface.Raised.Rest,
+              overflow: 'hidden',
+            }}
+          >
+            <Tabs defaultIndex={0}>
+              <Tab title="🔷 Smartscape View">
+                <div style={{ padding: 16 }}>
+                  <SmartscapeGrid nodes={siteTopology.nodes} />
+                </div>
+              </Tab>
+              <Tab title="📊 Topology Graph">
+                <TopologyMap
+                  nodes={siteTopology.nodes}
+                  edges={siteTopology.edges}
+                  height={540}
+                />
+              </Tab>
+            </Tabs>
+          </div>
         </>
       )}
     </Flex>
   );
 };
+
+/* ── Smartscape Grid: HoneycombChart showing entity health ── */
+const HEALTH_VALUE_MAP: Record<string, string> = {
+  healthy: 'Healthy',
+  warning: 'Warning',
+  critical: 'Critical',
+  unknown: 'Unknown',
+};
+
+const ROLE_ICON: Record<string, string> = {
+  router: '⬡',
+  'cloud-gw': '☁',
+  firewall: '🛡',
+  switch: '⬢',
+  server: '🖥',
+};
+
+function SmartscapeGrid({ nodes }: { nodes: TopologyNode[] }) {
+  /* Build categorical data: value = health status, name = device label */
+  const honeycombData = useMemo(
+    () =>
+      nodes.map((n) => ({
+        value: HEALTH_VALUE_MAP[n.health] ?? 'Unknown',
+        name: `${ROLE_ICON[n.role] ?? '●'} ${n.label}`,
+      })),
+    [nodes],
+  );
+
+  if (nodes.length === 0) {
+    return (
+      <Flex alignItems="center" justifyContent="center" style={{ height: 300, opacity: 0.5 }}>
+        <Paragraph>No entity data.</Paragraph>
+      </Flex>
+    );
+  }
+
+  return (
+    <HoneycombChart
+      data={honeycombData}
+      height={480}
+      shape="hexagon"
+      showLabels
+      colorScheme={{
+        Healthy: '#2ab06f',
+        Warning: '#fd8232',
+        Critical: '#dc172a',
+        Unknown: '#555555',
+      }}
+    >
+      <HoneycombChart.Legend position="bottom" />
+    </HoneycombChart>
+  );
+}
 
 /* ── Site Card Component ── */
 function SiteCard({ site, onClick }: { site: TopologySite; onClick: () => void }) {
