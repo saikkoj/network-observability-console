@@ -10,8 +10,8 @@ import { NocStatusBar, type StatusCategory } from '../components/NocStatusBar';
 import { KpiStrip } from '../components/KpiStrip';
 import { NocActionBar } from '../components/NocActionBar';
 import { AlertList } from '../components/AlertList';
-import { TopologyMap } from '../components/TopologyMap';
-import { useTopologyData } from '../hooks/useTopologyData';
+import { FinlandMap } from '../components/FinlandMap';
+import { useClusterData } from '../hooks/useClusterData';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_KPI, DEMO_CHART_DATA } from '../data/demoData';
 import Colors from '@dynatrace/strato-design-tokens/colors';
@@ -80,8 +80,8 @@ export const Home = () => {
   const warningCount = categoryStatusItems.filter((c) => c.severity === 'warning').length;
   const healthyCount = categoryStatusItems.filter((c) => c.severity === 'healthy').length;
 
-  /* ── Topology data ──── */
-  const { nodes: topoNodes, edges: topoEdges, isLoading: topoLoading, error: topoError } = useTopologyData(440, 260);
+  /* ── Cluster data (Finland map) ──── */
+  const { regions, totalEntities } = useClusterData();
 
   /* ── Global trend chart ──── */
   const chartResult = useDql(
@@ -165,17 +165,17 @@ export const Home = () => {
               }}
             >
               <Flex alignItems="center" gap={8}>
-                <span style={{ fontSize: 14 }}>🗺️</span>
-                <Heading level={5} style={{ margin: 0 }}>Network Topology</Heading>
+                <span style={{ fontSize: 14 }}>🇫🇮</span>
+                <Heading level={5} style={{ margin: 0 }}>Network Topology — Finland</Heading>
               </Flex>
               <Link
                 to="/topology"
                 style={{ fontSize: 11, color: '#73b1ff', textDecoration: 'none' }}
               >
-                View full map →
+                {totalEntities > 0 ? `${totalEntities.toLocaleString()} entities` : 'View full map'} →
               </Link>
             </Flex>
-            <TopologyMap nodes={topoNodes} edges={topoEdges} height={260} mini isLoading={topoLoading} error={topoError} />
+            <FinlandMap regions={regions} height={260} mini totalEntities={totalEntities} />
           </Flex>
 
           {/* Trend chart */}

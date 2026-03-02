@@ -223,3 +223,48 @@ export interface DemoAlert {
 }
 
 export type WorkflowStatus = 'idle' | 'loading' | 'success' | 'error';
+
+/* ── Hierarchical Topology Clusters (Finland map drill-down) ── */
+
+export type DrillDownLevel = 'country' | 'region' | 'site';
+
+export type SiteType = 'data-center' | 'office' | 'pop' | 'cell-tower' | 'exchange';
+
+/** Health breakdown counts */
+export interface HealthSummary {
+  healthy: number;
+  warning: number;
+  critical: number;
+  unknown: number;
+}
+
+/** Regional cluster on the Finland map */
+export interface TopologyCluster {
+  id: string;
+  label: string;
+  /** SVG x coordinate on the map */
+  x: number;
+  /** SVG y coordinate on the map */
+  y: number;
+  lat: number;
+  lon: number;
+  /** Total entity count */
+  deviceCount: number;
+  healthSummary: HealthSummary;
+  avgCpu?: number;
+  avgMemory?: number;
+  alertCount: number;
+}
+
+/** Site within a region — shown in region drill-down */
+export interface TopologySite {
+  id: string;
+  label: string;
+  regionId: string;
+  siteType: SiteType;
+  deviceCount: number;
+  healthSummary: HealthSummary;
+  avgCpu?: number;
+  avgMemory?: number;
+  alertCount: number;
+}
