@@ -152,7 +152,7 @@ export const Home = () => {
         {/* ── 4. Topology Mini-Map + Trend side-by-side ── */}
         <Flex gap={16} alignItems="stretch" style={{ minWidth: 0 }}>
           {/* Mini cluster map */}
-          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', contain: 'layout style' }}>
+          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
             <Flex
               alignItems="center"
               justifyContent="space-between"

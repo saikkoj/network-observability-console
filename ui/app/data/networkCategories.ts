@@ -218,7 +218,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       label: 'Saturated Interfaces (>95%)',
       dqlQuery: [
         `fetch \`dt.entity.network:interface\``,
-        `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+        `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
         `| lookup [fetch \`dt.entity.network:device\` | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -236,7 +236,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ].join('\n'),
       weekAgoDqlQuery: [
         `fetch \`dt.entity.network:interface\``,
-        `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+        `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
         `| lookup [fetch \`dt.entity.network:device\` | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -264,7 +264,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       label: 'Saturated Devices',
       dqlQuery: [
         `fetch \`dt.entity.network:interface\``,
-        `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+        `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
         `| lookup [fetch \`dt.entity.network:device\` | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -282,7 +282,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ].join('\n'),
       weekAgoDqlQuery: [
         `fetch \`dt.entity.network:interface\``,
-        `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+        `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
         `| lookup [fetch \`dt.entity.network:device\` | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
         `| fieldsAdd deviceName = d.deviceName`,
         `| lookup [`,
@@ -661,7 +661,7 @@ export const NETWORK_QUERIES = {
   /** Interface health table — top interfaces by load */
   interfaceHealth: [
     `fetch \`dt.entity.network:interface\``,
-    `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+    `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
     `| lookup [fetch \`dt.entity.network:device\` | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
     `| fieldsAdd deviceName = d.deviceName`,
     `| lookup [`,
@@ -763,7 +763,7 @@ export const NETWORK_QUERIES = {
   /** Interface up/down per device */
   interfaceUpDown: [
     `fetch \`dt.entity.network:interface\``,
-    `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+    `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
     `| lookup [fetch \`dt.entity.network:device\` | fieldsAdd deviceName = entity.name], sourceField:device, lookupField:id, prefix:"d."`,
     `| fieldsAdd deviceName = d.deviceName`,
     `| lookup [`,
@@ -803,8 +803,8 @@ export const NETWORK_QUERIES = {
   /** Topology — edges between devices based on shared interfaces with utilization */
   topologyEdges: [
     `fetch \`dt.entity.network:interface\``,
-    `| fieldsAdd sourceDevice = \`belongs_to[\`dt.entity.network:device\`]\``,
-    `| fieldsAdd targetDevice = \`connects_to[\`dt.entity.network:device\`]\``,
+    `| fieldsAdd sourceDevice = belongs_to[\`dt.entity.network:device\`]`,
+    `| fieldsAdd targetDevice = connects_to[\`dt.entity.network:device\`]`,
     `| filter isNotNull(targetDevice)`,
     `| lookup [`,
     `  timeseries {`,
@@ -846,7 +846,7 @@ export const NETWORK_QUERIES = {
    */
   topologyFlowEdges: [
     `fetch \`dt.entity.network:interface\``,
-    `| fieldsAdd device = \`belongs_to[\`dt.entity.network:device\`]\``,
+    `| fieldsAdd device = belongs_to[\`dt.entity.network:device\`]`,
     `| filter isNotNull(device)`,
     `| lookup [`,
     `  timeseries {`,
@@ -857,7 +857,7 @@ export const NETWORK_QUERIES = {
     `], sourceField:id, lookupField:\`dt.entity.network:interface\`, prefix:"t."`,
     `| fieldsAdd totalBytes = coalesce(t.totalBytes, 0)`,
     `| filter totalBytes > 0`,
-    `| fieldsAdd neighbor = \`connects_to[\`dt.entity.network:device\`]\``,
+    `| fieldsAdd neighbor = connects_to[\`dt.entity.network:device\`]`,
     `| filter isNotNull(neighbor) and neighbor != device`,
     `| summarize traffic = sum(totalBytes), by:{source = device, target = neighbor}`,
     `| sort traffic desc`,
