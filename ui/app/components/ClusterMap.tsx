@@ -2,10 +2,10 @@
  * ClusterMap — Geographic cluster visualization using strato-geo MapView + BubbleLayer.
  *
  * Each cluster is a bubble on a real geographic map, sized by entity count and
- * colored by health status. Supports controlled viewState for auto-zoom on
- * drill-down. Always renders the map even with zero regions (empty map background).
+ * colored by health status. Uses color="legend" + valueAccessor to tie BubbleLayer
+ * to CategoricalLegend (matching the documented strato-geo pattern).
  */
-import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { MapView, BubbleLayer, CategoricalLegend } from '@dynatrace/strato-geo';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
@@ -13,18 +13,20 @@ import type { TopologyCluster, HealthSummary } from '../types/network';
 
 /* ── Health → hex colour (raw hex only — CSS vars crash strato-geo) ── */
 const HEALTH_HEX = {
-  healthy: '#2ab06f',
-  warning: '#fd8232',
-  critical: '#dc172a',
-  unknown: '#555555',
+  Healthy: '#2ab06f',
+  Warning: '#fd8232',
+  Critical: '#dc172a',
+  Unknown: '#555555',
 } as const;
 
-function clusterHealthKey(hs: HealthSummary): keyof typeof HEALTH_HEX {
+type HealthKey = keyof typeof HEALTH_HEX;
+
+function clusterHealthKey(hs: HealthSummary): HealthKey {
   const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
-  if (total === 0) return 'unknown';
-  if (hs.critical / total > 0.04) return 'critical';
-  if (hs.warning / total > 0.08) return 'warning';
-  return 'healthy';
+  if (total === 0) return 'Unknown';
+  if (hs.critical / total > 0.04) return 'Critical';
+  if (hs.warning / total > 0.08) return 'Warning';
+  return 'Healthy';
 }
 
 /* ── BubbleLayer data point type ── */
@@ -32,7 +34,8 @@ interface ClusterBubble {
   latitude: number;
   longitude: number;
   entityCount: number;
-  health: keyof typeof HEALTH_HEX;
+  /** Health category — must match CategoricalLegend palette keys */
+  health: HealthKey;
   label: string;
   id: string;
   healthSummary: HealthSummary;
@@ -50,6 +53,14 @@ export interface MapViewState {
 
 /* Default Finland centre */
 export const FINLAND_CENTER: MapViewState = { latitude: 63.0, longitude: 25.0, zoom: 4.5 };
+
+/* CategoricalLegend palette — keys must match the `health` field values in bubble data */
+const LEGEND_PALETTE: Record<string, string> = {
+  Healthy: HEALTH_HEX.Healthy,
+  Warning: HEALTH_HEX.Warning,
+  Critical: HEALTH_HEX.Critical,
+  Unknown: HEALTH_HEX.Unknown,
+};
 
 /* ── Props ── */
 interface ClusterMapProps {
@@ -71,25 +82,6 @@ export const ClusterMap = ({
   viewState,
   hideLegend = false,
 }: ClusterMapProps) => {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [renderCount] = useState(() => ({ current: 0 }));
-  renderCount.current++;
-
-  /* ── DEBUG: Log every render with all props ── */
-  console.log(
-    `%c[ClusterMap] render #${renderCount.current}`,
-    'color: #73b1ff; font-weight: bold',
-    {
-      height,
-      heightType: typeof height,
-      mini,
-      viewState,
-      hideLegend,
-      regionsCount: regions.length,
-      hasOnRegionClick: !!onRegionClick,
-    },
-  );
-
   /* Transform cluster data into BubbleLayer data points */
   const bubbleData = useMemo<ClusterBubble[]>(
     () =>
@@ -119,105 +111,16 @@ export const ClusterMap = ({
     return { latitude: avgLat, longitude: avgLon, zoom: mini ? zoom - 0.5 : zoom };
   }, [regions, mini]);
 
-  /* Colour callback — raw hex only */
-  const colorAccessor = useCallback(
-    (item: ClusterBubble) => HEALTH_HEX[item.health],
-    [],
-  );
-
   /* Drill-down handler */
   const handleDrill = useCallback(
     (id: string) => { onRegionClick?.(id); },
     [onRegionClick],
   );
 
-  /* CategoricalLegend colour palette */
-  const legendPalette: Record<string, string> = {
-    Healthy: HEALTH_HEX.healthy,
-    Warning: HEALTH_HEX.warning,
-    Critical: HEALTH_HEX.critical,
-  };
-
   const resolvedViewState = viewState ?? defaultCenter;
-
-  /* ── DEBUG: Log resolved map configuration ── */
-  console.log(
-    `%c[ClusterMap] map config`,
-    'color: #2ab06f; font-weight: bold',
-    {
-      resolvedViewState,
-      bubbleDataCount: bubbleData.length,
-      bubbleDataSample: bubbleData.slice(0, 2),
-      showLegend: !mini && !hideLegend,
-    },
-  );
-
-  /* ── DEBUG: Inspect wrapper div and MapView DOM after mount ── */
-  useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) {
-      console.warn('[ClusterMap] wrapper ref is null after mount');
-      return;
-    }
-    const rect = wrapper.getBoundingClientRect();
-    console.log(
-      `%c[ClusterMap] wrapper DOM rect`,
-      'color: #ffd54f; font-weight: bold',
-      { width: rect.width, height: rect.height, top: rect.top, left: rect.left },
-    );
-
-    // Find any canvas or deck.gl elements inside
-    const canvases = wrapper.querySelectorAll('canvas');
-    const mapDivs = wrapper.querySelectorAll('[class*="map"], [class*="Map"], [data-testid]');
-    const allChildren = wrapper.querySelectorAll('*');
-    console.log(
-      `%c[ClusterMap] DOM inspection`,
-      'color: #ff8a65; font-weight: bold',
-      {
-        canvasCount: canvases.length,
-        canvasSizes: Array.from(canvases).map((c) => ({ w: c.width, h: c.height, style: c.style.cssText })),
-        mapDivCount: mapDivs.length,
-        totalChildElements: allChildren.length,
-        firstFewChildren: Array.from(allChildren).slice(0, 10).map((el) => ({
-          tag: el.tagName,
-          className: el.className?.toString?.()?.substring(0, 60),
-          style: (el as HTMLElement).style?.cssText?.substring(0, 100),
-          rect: el.getBoundingClientRect(),
-        })),
-      },
-    );
-
-    // Check for zero-size containers that might hide the map
-    Array.from(allChildren).forEach((el, i) => {
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) {
-        console.warn(
-          `[ClusterMap] zero-size element #${i}`,
-          el.tagName,
-          el.className?.toString?.()?.substring(0, 40),
-          { w: r.width, h: r.height },
-        );
-      }
-    });
-  });
-
-  /* ── DEBUG: Log MapView import to verify strato-geo loaded ── */
-  useEffect(() => {
-    console.log(
-      `%c[ClusterMap] strato-geo imports`,
-      'color: #b388ff; font-weight: bold',
-      {
-        MapView: typeof MapView,
-        MapViewStr: String(MapView),
-        BubbleLayer: typeof BubbleLayer,
-        CategoricalLegend: typeof CategoricalLegend,
-      },
-    );
-  }, []);
 
   return (
     <div
-      ref={wrapperRef}
       style={{
         borderRadius: mini
           ? `0 0 ${Borders.Radius.Container.Default} ${Borders.Radius.Container.Default}`
@@ -226,17 +129,21 @@ export const ClusterMap = ({
         borderTop: mini ? `1px solid ${Colors.Border.Neutral.Default}` : undefined,
         overflow: 'hidden',
         position: 'relative',
+        width: '100%',
       }}
     >
       <MapView height={height} initialViewState={resolvedViewState}>
         {bubbleData.length > 0 && (
           <BubbleLayer
             data={bubbleData}
-            color={colorAccessor}
-            scale="log"
-            radius={(item: ClusterBubble) => item.entityCount}
-            radiusRange={mini ? [8, 28] : [14, 50]}
-            sizeInterpolation="fixed"
+            color="legend"
+            valueAccessor="health"
+            scale="none"
+            radius={(item: ClusterBubble) => {
+              const minR = mini ? 8 : 14;
+              const maxR = mini ? 28 : 50;
+              return Math.max(minR, Math.min(maxR, Math.sqrt(item.entityCount) * (mini ? 4 : 6)));
+            }}
           >
             <BubbleLayer.Tooltip>
               {(closestDot) => {
@@ -252,9 +159,9 @@ export const ClusterMap = ({
                       Entities: <b>{d.entityCount.toLocaleString()}</b>
                     </div>
                     <div style={{ display: 'flex', gap: 10, fontSize: 11, marginBottom: 4 }}>
-                      <span style={{ color: HEALTH_HEX.healthy }}>● {hs.healthy} ok</span>
-                      <span style={{ color: HEALTH_HEX.warning }}>● {hs.warning} warn</span>
-                      <span style={{ color: HEALTH_HEX.critical }}>● {hs.critical} crit</span>
+                      <span style={{ color: HEALTH_HEX.Healthy }}>● {hs.healthy} ok</span>
+                      <span style={{ color: HEALTH_HEX.Warning }}>● {hs.warning} warn</span>
+                      <span style={{ color: HEALTH_HEX.Critical }}>● {hs.critical} crit</span>
                     </div>
                     {total > 0 && (
                       <div
@@ -266,9 +173,9 @@ export const ClusterMap = ({
                           marginBottom: 4,
                         }}
                       >
-                        <div style={{ width: `${(hs.healthy / total) * 100}%`, background: HEALTH_HEX.healthy }} />
-                        <div style={{ width: `${(hs.warning / total) * 100}%`, background: HEALTH_HEX.warning }} />
-                        <div style={{ width: `${(hs.critical / total) * 100}%`, background: HEALTH_HEX.critical }} />
+                        <div style={{ width: `${(hs.healthy / total) * 100}%`, background: HEALTH_HEX.Healthy }} />
+                        <div style={{ width: `${(hs.warning / total) * 100}%`, background: HEALTH_HEX.Warning }} />
+                        <div style={{ width: `${(hs.critical / total) * 100}%`, background: HEALTH_HEX.Critical }} />
                       </div>
                     )}
                     {d.avgCpu != null && (
@@ -279,7 +186,7 @@ export const ClusterMap = ({
                     <div
                       style={{
                         fontSize: 11,
-                        color: d.alertCount > 3 ? HEALTH_HEX.warning : undefined,
+                        color: d.alertCount > 3 ? HEALTH_HEX.Warning : undefined,
                         opacity: d.alertCount > 3 ? 1 : 0.7,
                       }}
                     >
@@ -312,7 +219,9 @@ export const ClusterMap = ({
           </BubbleLayer>
         )}
 
-        {!mini && !hideLegend && <CategoricalLegend colorPalette={legendPalette} position="bottom" />}
+        {!mini && !hideLegend && (
+          <CategoricalLegend colorPalette={LEGEND_PALETTE} position="bottom" />
+        )}
       </MapView>
     </div>
   );
