@@ -7,6 +7,7 @@ import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 import type { TableColumn } from '@dynatrace/strato-components-preview/tables';
+import { useDql } from '@dynatrace-sdk/react-hooks';
 
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_ALERTS } from '../data/demoData';
@@ -67,6 +68,32 @@ function formatDuration(mins: number): string {
 
 type FilterTab = 'active' | 'resolved' | 'all';
 
+/* ── Davis event.category → DemoAlert severity ── */
+const mapSeverity = (cat: string): DemoAlert['severity'] => {
+  if (cat === 'AVAILABILITY') return 'critical';
+  if (cat === 'ERROR') return 'major';
+  if (cat === 'RESOURCE_CONTENTION') return 'minor';
+  return 'info';
+};
+
+/* ── Davis event.category → DemoAlert category ── */
+const mapCategory = (cat: string): DemoAlert['category'] => {
+  if (cat === 'AVAILABILITY') return 'REACHABILITY';
+  if (cat === 'RESOURCE_CONTENTION') return 'SATURATION';
+  if (cat === 'ERROR') return 'ERRORS';
+  return 'TRAFFIC';
+};
+
+const LIVE_ALERTS_QUERY = [
+  `fetch dt.davis.problems`,
+  `| expand affected_entity_ids`,
+  `| filter startsWith(affected_entity_ids, "CUSTOM_DEVICE")`,
+  `| dedup display_id`,
+  `| fields display_id, event.name, event.category, event.status, timestamp, affected_entity_ids`,
+  `| sort timestamp desc`,
+  `| limit 50`,
+].join('\n');
+
 interface AlertListProps {
   liveAlerts?: DemoAlert[];
 }
@@ -76,7 +103,35 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
   const [filter, setFilter] = useState<FilterTab>('active');
   const [selectedRowAction, setSelectedRowAction] = useState<NetworkAction | null>(null);
 
-  const allAlerts = demoMode ? DEMO_ALERTS : (liveAlerts ?? []);
+  /* ── Live DQL query for alerts ────────────────── */
+  const { data: liveData } = useDql(
+    { query: LIVE_ALERTS_QUERY },
+    { enabled: !demoMode, refetchInterval: 60_000 },
+  );
+
+  const liveMappedAlerts = useMemo<DemoAlert[]>(() => {
+    if (demoMode || !liveData?.records) return [];
+    return liveData.records.map((r: Record<string, unknown>) => {
+      const ts = r['timestamp'];
+      const startDate = ts instanceof Date ? ts : new Date(String(ts ?? ''));
+      const nowMs = Date.now();
+      const durationMins = Math.max(0, Math.round((nowMs - startDate.getTime()) / 60_000));
+      const eventCat = String(r['event.category'] ?? '');
+      const eventStatus = String(r['event.status'] ?? 'ACTIVE');
+      return {
+        id: String(r['display_id'] ?? ''),
+        title: String(r['event.name'] ?? r['display_id'] ?? 'Unknown'),
+        severity: mapSeverity(eventCat),
+        category: mapCategory(eventCat),
+        entity: String(r['affected_entity_ids'] ?? ''),
+        startedAt: startDate,
+        status: (eventStatus === 'CLOSED' ? 'CLOSED' : 'ACTIVE') as DemoAlert['status'],
+        durationMins,
+      };
+    });
+  }, [demoMode, liveData]);
+
+  const allAlerts = demoMode ? DEMO_ALERTS : (liveAlerts ?? liveMappedAlerts);
 
   const filteredAlerts = useMemo(() => {
     const sorted = [...allAlerts].sort((a, b) => {
