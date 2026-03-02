@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
@@ -138,15 +138,30 @@ export const Topology = () => {
   /* If not demo mode and at country level, show flat topology */
   const showFlatTopology = !demoMode && level === 'country';
 
+  /* Measure container height so we can pass a numeric pixel value to MapView
+     (strato-geo MapView needs a resolved pixel height, not CSS "100%"). */
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerH, setContainerH] = useState(640);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const h = Math.round(entry.contentRect.height);
+      if (h > 0 && h !== containerH) setContainerH(h);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', minWidth: 0, height: '100%', minHeight: 640 }}>
+    <div ref={containerRef} style={{ position: 'relative', overflow: 'hidden', minWidth: 0, height: '100%', minHeight: 640 }}>
       {/* ── PERSISTENT MAP BACKGROUND ── */}
       {demoMode && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <ClusterMap
             regions={regions}
             onRegionClick={level === 'country' ? drillToRegion : undefined}
-            height="100%"
+            height={containerH}
             viewState={mapViewState}
             hideLegend={level !== 'country'}
           />

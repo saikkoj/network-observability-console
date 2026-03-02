@@ -134,6 +134,7 @@ export const ClusterMap = ({
         borderTop: mini ? `1px solid ${Colors.Border.Neutral.Default}` : undefined,
         overflow: 'hidden',
         position: 'relative',
+        height: typeof height === 'string' ? height : undefined,
       }}
     >
       <MapView height={height} {...mapProps}>
