@@ -209,11 +209,12 @@ export const DEMO_ALERTS: DemoAlert[] = [
 ];
 
 /* ══════════════════════════════════════════════════════
- * FINLAND MAP — Hierarchical cluster data
+ * CLUSTER MAP — Hierarchical region/site demo data
  *
- * Demo data uses ~350 entities across 6 regions.
+ * Demo data uses ~350 entities across 6 Finnish regions.
  * Only Uusimaa and Lappi have site-level drill-down.
- * The architecture is scalable to 80 000+ entities.
+ * The architecture is generic and scalable to 80 000+ entities
+ * across any geography.
  * ══════════════════════════════════════════════════════ */
 
 function genHealth(total: number, critPct: number, warnPct: number): HealthSummary {

@@ -1,7 +1,7 @@
 /**
- * useClusterData — provides hierarchical region/site data for the Finland map.
+ * useClusterData — provides hierarchical region/site data for the cluster map.
  *
- * In demo mode: returns pre-built DEMO_REGIONS / DEMO_SITES.
+ * In demo mode: returns pre-built DEMO_REGIONS / DEMO_SITES (Finland demo data).
  * In live mode: would aggregate dt.entity.network:device by management_zone → region.
  *               (placeholder — returns empty until DQL queries are wired up)
  */

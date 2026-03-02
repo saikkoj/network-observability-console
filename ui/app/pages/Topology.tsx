@@ -3,7 +3,7 @@ import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { Button } from '@dynatrace/strato-components/buttons';
 import { Link } from '@dynatrace/strato-components/typography';
-import { FinlandMap } from '../components/FinlandMap';
+import { ClusterMap } from '../components/ClusterMap';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { useClusterData } from '../hooks/useClusterData';
@@ -72,7 +72,7 @@ export const Topology = () => {
 
   /* breadcrumb parts */
   const crumbs: Array<{ label: string; action?: () => void }> = [
-    { label: '🇫🇮 Finland', action: level !== 'country' ? () => { setLevel('country'); setRegionId(null); setSiteId(null); } : undefined },
+    { label: '� All Regions', action: level !== 'country' ? () => { setLevel('country'); setRegionId(null); setSiteId(null); } : undefined },
   ];
   if (currentRegion) {
     crumbs.push({ label: currentRegion.label, action: level === 'site' ? () => { setLevel('region'); setSiteId(null); } : undefined });
@@ -119,7 +119,7 @@ export const Topology = () => {
 
       {/* ── COUNTRY LEVEL: Finland map ── */}
       {level === 'country' && demoMode && (
-        <FinlandMap
+        <ClusterMap
           regions={regions}
           onRegionClick={drillToRegion}
           height={640}

@@ -10,7 +10,7 @@ import { NocStatusBar, type StatusCategory } from '../components/NocStatusBar';
 import { KpiStrip } from '../components/KpiStrip';
 import { NocActionBar } from '../components/NocActionBar';
 import { AlertList } from '../components/AlertList';
-import { FinlandMap } from '../components/FinlandMap';
+import { ClusterMap } from '../components/ClusterMap';
 import { useClusterData } from '../hooks/useClusterData';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_KPI, DEMO_CHART_DATA } from '../data/demoData';
@@ -108,7 +108,7 @@ export const Home = () => {
     <>
       <style>{pulseKeyframes}</style>
 
-      <Flex flexDirection="column" padding={24} gap={20} style={{ overflow: 'hidden' }}>
+      <Flex flexDirection="column" padding={24} gap={20} style={{ overflow: 'hidden', scrollbarGutter: 'stable' }}>
         {/* ── NOC Header ──────────────────── */}
         <Flex alignItems="center" justifyContent="space-between">
           <Flex alignItems="center" gap={12}>
@@ -149,12 +149,9 @@ export const Home = () => {
         <NocActionBar />
 
         {/* ── 4. Topology Mini-Map + Trend side-by-side ── */}
-        <Flex gap={16} alignItems="stretch" style={{ overflow: 'hidden' }}>
-          {/* Mini topology — fixed-height container to prevent layout jitter */}
-          <Flex
-            flexDirection="column"
-            style={{ flex: 1, minWidth: 200, minHeight: 300, overflow: 'hidden', contain: 'layout' }}
-          >
+        <Flex gap={16} alignItems="stretch">
+          {/* Mini cluster map */}
+          <div style={{ flex: 1, minWidth: 200 }}>
             <Flex
               alignItems="center"
               justifyContent="space-between"
@@ -167,8 +164,8 @@ export const Home = () => {
               }}
             >
               <Flex alignItems="center" gap={8}>
-                <span style={{ fontSize: 14 }}>🇫🇮</span>
-                <Heading level={5} style={{ margin: 0 }}>Network Topology — Finland</Heading>
+                <span style={{ fontSize: 14 }}>🗺️</span>
+                <Heading level={5} style={{ margin: 0 }}>Network Clusters</Heading>
               </Flex>
               <Link
                 to="/topology"
@@ -177,12 +174,11 @@ export const Home = () => {
                 {totalEntities > 0 ? `${totalEntities.toLocaleString()} entities` : 'View full map'} →
               </Link>
             </Flex>
-            <FinlandMap regions={regions} height={260} mini />
-          </Flex>
+            <ClusterMap regions={regions} height={260} mini />
+          </div>
 
           {/* Trend chart */}
-          <Flex
-            flexDirection="column"
+          <div
             style={{
               flex: 1,
               minWidth: 200,
@@ -191,6 +187,8 @@ export const Home = () => {
               border: `1px solid ${Colors.Border.Neutral.Default}`,
               boxShadow: BoxShadows.Surface.Raised.Rest,
               overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <Flex
@@ -218,7 +216,7 @@ export const Home = () => {
                 </Flex>
               )}
             </div>
-          </Flex>
+          </div>
         </Flex>
 
         {/* ── 5. Active Alerts ───────────── */}

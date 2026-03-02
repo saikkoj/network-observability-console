@@ -224,7 +224,7 @@ export interface DemoAlert {
 
 export type WorkflowStatus = 'idle' | 'loading' | 'success' | 'error';
 
-/* ── Hierarchical Topology Clusters (Finland map drill-down) ── */
+/* ── Hierarchical Topology Clusters (cluster map drill-down) ── */
 
 export type DrillDownLevel = 'country' | 'region' | 'site';
 
@@ -238,7 +238,7 @@ export interface HealthSummary {
   unknown: number;
 }
 
-/** Regional cluster on the Finland map */
+/** Regional cluster on the map */
 export interface TopologyCluster {
   id: string;
   label: string;
