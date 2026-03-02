@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import Colors from '@dynatrace/strato-design-tokens/colors';
@@ -28,6 +28,13 @@ export const NocStatusBar = ({
   healthyCount,
   categories,
 }: NocStatusBarProps) => {
+  /* Stable clock — updates every 30 s to avoid per-render recalculation */
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <Flex
       flexDirection="row"
@@ -118,7 +125,7 @@ export const NocStatusBar = ({
           Last Update
         </Paragraph>
         <Paragraph style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
-          {new Date().toLocaleTimeString()}
+          {now.toLocaleTimeString()}
         </Paragraph>
       </Flex>
     </Flex>

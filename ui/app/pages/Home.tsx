@@ -19,11 +19,11 @@ import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
 import { computeSeverity, toNum, modeBadgeStyle } from '../utils';
 
-/* ── Pulse keyframe for critical ──────────────────── */
+/* ── Pulse keyframe for critical (GPU-accelerated outline) ──────────────────── */
 const pulseKeyframes = `
 @keyframes nocPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220,23,42,0.0); }
-  50%      { box-shadow: 0 0 12px 2px rgba(220,23,42,0.25); }
+  0%, 100% { outline-color: rgba(220,23,42,0.0); }
+  50%      { outline-color: rgba(220,23,42,0.35); }
 }
 `;
 
@@ -129,6 +129,8 @@ export const Home = () => {
           style={{
             animation: hasCritical ? 'nocPulse 2s ease-in-out infinite' : 'none',
             borderRadius: Borders.Radius.Container.Default,
+            outline: hasCritical ? '2px solid rgba(220,23,42,0)' : 'none',
+            outlineOffset: 2,
           }}
         >
           <NocStatusBar
@@ -148,10 +150,10 @@ export const Home = () => {
 
         {/* ── 4. Topology Mini-Map + Trend side-by-side ── */}
         <Flex gap={16} alignItems="stretch">
-          {/* Mini topology */}
+          {/* Mini topology — fixed-height container to prevent layout jitter */}
           <Flex
             flexDirection="column"
-            style={{ flex: 1, minWidth: 0 }}
+            style={{ flex: 1, minWidth: 0, minHeight: 300 }}
           >
             <Flex
               alignItems="center"

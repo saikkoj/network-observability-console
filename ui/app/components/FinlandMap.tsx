@@ -13,15 +13,15 @@ import { MapView, BubbleLayer, CategoricalLegend } from '@dynatrace/strato-geo';
 import type { BubbleLayerTooltipData } from '@dynatrace/strato-geo';
 import type { TopologyCluster, HealthSummary } from '../types/network';
 
-/* ── Health → colour mapping ── */
+/* ── Health → colour mapping (raw hex — MapLibre WebGL requires resolved colours) ── */
 function clusterColor(hs: HealthSummary): string {
   const total = hs.healthy + hs.warning + hs.critical + hs.unknown;
-  if (total === 0) return '#555';
+  if (total === 0) return '#555555';
   const critRatio = hs.critical / total;
   const warnRatio = hs.warning / total;
-  if (critRatio > 0.04) return 'var(--dt-colors-charts-status-critical-default, #dc172a)';
-  if (warnRatio > 0.08) return 'var(--dt-colors-charts-status-warning-default, #fd8232)';
-  return 'var(--dt-colors-charts-status-success-default, #2ab06f)';
+  if (critRatio > 0.04) return '#dc172a';
+  if (warnRatio > 0.08) return '#fd8232';
+  return '#2ab06f';
 }
 
 /* ── Health label for legend ── */
@@ -33,12 +33,6 @@ function healthLabel(hs: HealthSummary): string {
   if (critRatio > 0.04) return 'Critical';
   if (warnRatio > 0.08) return 'Warning';
   return 'Healthy';
-}
-
-/* ── Format large numbers ── */
-function fmtCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
-  return String(n);
 }
 
 /* ── Bubble data shape for BubbleLayer ── */
@@ -105,22 +99,22 @@ export const FinlandMap = ({
             Entities: <b>{c.deviceCount.toLocaleString()}</b>
           </div>
           <Flex gap={12} style={{ fontSize: 11 }}>
-            <span style={{ color: 'var(--dt-colors-charts-status-success-default, #2ab06f)' }}>
+            <span style={{ color: '#2ab06f' }}>
               ● {hs.healthy.toLocaleString()} healthy
             </span>
-            <span style={{ color: 'var(--dt-colors-charts-status-warning-default, #fd8232)' }}>
+            <span style={{ color: '#fd8232' }}>
               ● {hs.warning.toLocaleString()} warning
             </span>
-            <span style={{ color: 'var(--dt-colors-charts-status-critical-default, #dc172a)' }}>
+            <span style={{ color: '#dc172a' }}>
               ● {hs.critical.toLocaleString()} critical
             </span>
           </Flex>
           {/* Mini health bar */}
           {total > 0 && (
             <div style={{ display: 'flex', height: 5, borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${(hs.healthy / total) * 100}%`, background: 'var(--dt-colors-charts-status-success-default, #2ab06f)' }} />
-              <div style={{ width: `${(hs.warning / total) * 100}%`, background: 'var(--dt-colors-charts-status-warning-default, #fd8232)' }} />
-              <div style={{ width: `${(hs.critical / total) * 100}%`, background: 'var(--dt-colors-charts-status-critical-default, #dc172a)' }} />
+              <div style={{ width: `${(hs.healthy / total) * 100}%`, background: '#2ab06f' }} />
+              <div style={{ width: `${(hs.warning / total) * 100}%`, background: '#fd8232' }} />
+              <div style={{ width: `${(hs.critical / total) * 100}%`, background: '#dc172a' }} />
             </div>
           )}
           {c.avgCpu !== undefined && (
@@ -180,9 +174,9 @@ export const FinlandMap = ({
       {!mini && (
         <CategoricalLegend
           colorPalette={{
-            Healthy: 'var(--dt-colors-charts-status-success-default, #2ab06f)',
-            Warning: 'var(--dt-colors-charts-status-warning-default, #fd8232)',
-            Critical: 'var(--dt-colors-charts-status-critical-default, #dc172a)',
+            Healthy: '#2ab06f',
+            Warning: '#fd8232',
+            Critical: '#dc172a',
           }}
         />
       )}
