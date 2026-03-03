@@ -2,17 +2,29 @@ import React, { useMemo, useState } from 'react';
 import { Flex } from '@dynatrace/strato-components/layouts';
 import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import { Button } from '@dynatrace/strato-components/buttons';
+import { Link } from '@dynatrace/strato-components/typography';
 import { DataTable } from '@dynatrace/strato-components-preview/tables';
+import { Menu } from '@dynatrace/strato-components-preview/navigation';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
-import type { TableColumn } from '@dynatrace/strato-components-preview/tables';
 import { useDql } from '@dynatrace-sdk/react-hooks';
+import {
+  CheckmarkIcon,
+  DocumentIcon,
+  ArrowUpIcon,
+  ListIcon,
+  MagnifyingGlassIcon,
+  NotificationActiveIcon,
+  ExternalLinkIcon,
+  OpenWithIcon,
+} from '@dynatrace/strato-icons';
 
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_ALERTS } from '../data/demoData';
 import { ActionModal } from './ActionModal';
 import type { NetworkAction, DemoAlert } from '../types/network';
+import { getDeviceUrl, openDeviceDetail, getProblemUrl, openProblemDetail, entityLinkStyle } from '../utils';
 
 /* ── Severity styling ─────────────────────────────── */
 const SEV = {
@@ -30,12 +42,12 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 /* ── Per-row quick actions ────────────────────────── */
-const ROW_ACTIONS: { icon: string; label: string; type: NetworkAction['type']; tip: string }[] = [
-  { icon: '✅', label: 'Ack',     type: 'acknowledge',   tip: 'Acknowledge this alert' },
-  { icon: '🎫', label: 'Ticket',  type: 'create-ticket', tip: 'Create incident ticket' },
-  { icon: '⬆️', label: 'Escalate', type: 'escalate',      tip: 'Escalate to L2/L3' },
-  { icon: '📋', label: 'Runbook', type: 'runbook',       tip: 'Execute runbook' },
-  { icon: '🔍', label: 'RCA',     type: 'root-cause',    tip: 'AI root cause analysis' },
+const ROW_ACTIONS: { Icon: React.ComponentType; label: string; type: NetworkAction['type'] }[] = [
+  { Icon: CheckmarkIcon, label: 'Acknowledge',    type: 'acknowledge' },
+  { Icon: DocumentIcon,  label: 'Create Ticket',  type: 'create-ticket' },
+  { Icon: ArrowUpIcon,   label: 'Escalate',       type: 'escalate' },
+  { Icon: ListIcon,      label: 'Run Runbook',    type: 'runbook' },
+  { Icon: MagnifyingGlassIcon, label: 'Root Cause', type: 'root-cause' },
 ];
 
 function buildRowAction(actionType: NetworkAction['type'], alert: DemoAlert): NetworkAction {
@@ -49,7 +61,7 @@ function buildRowAction(actionType: NetworkAction['type'], alert: DemoAlert): Ne
   return {
     type: actionType,
     label: `${labelMap[actionType] ?? actionType} — ${alert.title}`,
-    icon: ROW_ACTIONS.find(a => a.type === actionType)?.icon ?? '⚡',
+    icon: ROW_ACTIONS.find(a => a.type === actionType)?.label ?? actionType,
     description: `Execute ${labelMap[actionType] ?? actionType} for "${alert.title}" on ${alert.entity}.`,
     confirmMessage: `${labelMap[actionType] ?? actionType} for "${alert.title}" (${alert.entity})?`,
     successMessage: `${labelMap[actionType] ?? actionType} initiated for ${alert.title}.`,
@@ -118,12 +130,16 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
       const durationMins = Math.max(0, Math.round((nowMs - startDate.getTime()) / 60_000));
       const eventCat = String(r['event.category'] ?? '');
       const eventStatus = String(r['event.status'] ?? 'ACTIVE');
+      const entityId = String(r['affected_entity_ids'] ?? '');
+      const displayId = String(r['display_id'] ?? '');
       return {
-        id: String(r['display_id'] ?? ''),
-        title: String(r['event.name'] ?? r['display_id'] ?? 'Unknown'),
+        id: displayId,
+        title: String(r['event.name'] ?? displayId ?? 'Unknown'),
         severity: mapSeverity(eventCat),
         category: mapCategory(eventCat),
-        entity: String(r['affected_entity_ids'] ?? ''),
+        entity: entityId,
+        entityId,
+        problemId: displayId,
         startedAt: startDate,
         status: (eventStatus === 'CLOSED' ? 'CLOSED' : 'ACTIVE') as DemoAlert['status'],
         durationMins,
@@ -147,8 +163,9 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
   const activeCount = allAlerts.filter(a => a.status === 'ACTIVE').length;
   const resolvedCount = allAlerts.filter(a => a.status === 'CLOSED').length;
 
-  const columns = useMemo<TableColumn[]>(() => [
+  const columns: any[] = useMemo(() => [
     {
+      id: 'severity',
       header: 'Sev',
       accessor: 'severity',
       cell: ({ value }: { value: string }) => {
@@ -157,7 +174,7 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
           <span
             style={{
               display: 'inline-block', padding: '2px 8px', borderRadius: 10,
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.5px',
+              letterSpacing: '0.5px',
               background: s.bg, color: s.color, border: `1px solid ${s.color}40`,
               whiteSpace: 'nowrap',
             }}
@@ -166,44 +183,84 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
           </span>
         );
       },
-      disableSortBy: false,
-      width: 90,
-    },
-    {
-      header: 'Alert',
-      accessor: 'title',
-    },
-    {
-      header: 'Category',
-      accessor: 'category',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontSize: 12, opacity: 0.8 }}>{CATEGORY_LABEL[value] ?? value}</span>
-      ),
       width: 100,
     },
     {
+      id: 'title',
+      header: 'Alert',
+      accessor: 'title',
+      columnType: 'text',
+      width: '1fr',
+    },
+    {
+      id: 'category',
+      header: 'Category',
+      accessor: (row: DemoAlert) => CATEGORY_LABEL[row.category] ?? row.category,
+      columnType: 'text',
+      width: 110,
+    },
+    {
+      id: 'entity',
       header: 'Entity',
       accessor: 'entity',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontSize: 12, fontFamily: 'monospace', opacity: 0.85 }}>{value}</span>
-      ),
+      cell: ({ value, rowData }: { value: string; rowData: DemoAlert }) => {
+        const eid = rowData.entityId;
+        if (!eid) return <span>{value}</span>;
+        return (
+          <a
+            href={getDeviceUrl(eid)}
+            target="_blank"
+            rel="noopener"
+            style={entityLinkStyle}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); openDeviceDetail(eid); }}
+            title={`Open ${value} in Infra & Operations`}
+          >
+            {value}
+          </a>
+        );
+      },
       width: 200,
     },
     {
-      header: 'Age',
-      accessor: 'durationMins',
-      cell: ({ value }: { value: number }) => (
-        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{formatDuration(value)}</span>
-      ),
-      width: 80,
+      id: 'problemId',
+      header: 'Problem',
+      accessor: 'problemId',
+      cell: ({ value }: { value?: string }) => {
+        if (!value) return <span style={{ opacity: 0.35 }}>—</span>;
+        return (
+          <a
+            href={getProblemUrl(value)}
+            target="_blank"
+            rel="noopener"
+            style={entityLinkStyle}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); openProblemDetail(value); }}
+            title={`Open problem ${value} in Dynatrace`}
+          >
+            <Flex alignItems="center" gap={4}>
+              <OpenWithIcon style={{ width: 12, height: 12 }} />
+              {value}
+            </Flex>
+          </a>
+        );
+      },
+      width: 140,
     },
     {
+      id: 'durationMins',
+      header: 'Age',
+      accessor: (row: DemoAlert) => formatDuration(row.durationMins),
+      columnType: 'text',
+      alignment: 'right',
+      width: 70,
+    },
+    {
+      id: 'status',
       header: 'Status',
       accessor: 'status',
       cell: ({ value }: { value: string }) => (
         <span
           style={{
-            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+            padding: '2px 6px', borderRadius: 4,
             background: value === 'ACTIVE' ? 'rgba(220,23,42,0.10)' : 'rgba(42,176,111,0.10)',
             color: value === 'ACTIVE' ? '#dc172a' : '#2ab06f',
           }}
@@ -214,43 +271,23 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
       width: 80,
     },
     {
-      header: 'ID',
-      accessor: 'id',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontSize: 11, fontFamily: 'monospace', opacity: 0.6 }}>{value}</span>
-      ),
-      width: 110,
-    },
-    {
-      header: 'Actions',
-      accessor: '_actions',
-      disableSortBy: true,
-      cell: ({ row }: { row: { original: DemoAlert } }) => {
-        const alert = row.original;
+      id: 'snowIncidentUrl',
+      header: 'ServiceNow',
+      accessor: 'snowIncidentUrl',
+      disableSorting: true,
+      cell: ({ value }: { value?: string }) => {
+        if (!value) return <span style={{ opacity: 0.35 }}>—</span>;
+        const incId = value.match(/sys_id=(INC\w+)/)?.[1] ?? 'Incident';
         return (
-          <Flex gap={2} alignItems="center" style={{ flexWrap: 'nowrap' }}>
-            {ROW_ACTIONS.map((ra) => (
-              <Button
-                key={ra.type}
-                variant="default"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  setSelectedRowAction(buildRowAction(ra.type, alert));
-                }}
-                style={{
-                  padding: '2px 6px',
-                  fontSize: 10,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span style={{ fontSize: 11 }}>{ra.icon}</span>
-                {ra.label}
-              </Button>
-            ))}
-          </Flex>
+          <Link href={value} target="_blank" rel="noopener noreferrer">
+            <Flex alignItems="center" gap={4}>
+              <ExternalLinkIcon style={{ width: 12, height: 12 }} />
+              {incId}
+            </Flex>
+          </Link>
         );
       },
-      width: 310,
+      width: 130,
     },
   ], []);
 
@@ -278,7 +315,10 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
         }}
       >
         <Flex alignItems="baseline" gap={12}>
-          <Heading level={5} style={{ margin: 0 }}>🚨 Active Network Alerts</Heading>
+          <Flex alignItems="center" gap={8}>
+            <NotificationActiveIcon />
+            <Heading level={5} style={{ margin: 0 }}>Active Network Alerts</Heading>
+          </Flex>
           <Paragraph style={{ fontSize: 12, opacity: 0.6 }}>
             {activeCount} active · {resolvedCount} resolved
           </Paragraph>
@@ -289,8 +329,8 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
             <Button
               key={tab}
               variant={filter === tab ? 'emphasized' : 'default'}
+              size="condensed"
               onClick={() => setFilter(tab)}
-              style={{ fontSize: 11, padding: '3px 10px', textTransform: 'capitalize' }}
             >
               {tab} {tab === 'active' ? `(${activeCount})` : tab === 'resolved' ? `(${resolvedCount})` : `(${allAlerts.length})`}
             </Button>
@@ -306,12 +346,43 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
       ) : (
         <DataTable
           data={data}
-          columns={columns}
+          columns={columns as any}
           sortable
           fullWidth
-          variant={{ rowDensity: 'condensed' }}
-          height={440}
+          variant={{ verticalDividers: true }}
         >
+          <DataTable.RowActions>
+            {(row: DemoAlert) => {
+              const ack = ROW_ACTIONS.find(a => a.type === 'acknowledge');
+              const rest = ROW_ACTIONS.filter(a => a.type !== 'acknowledge');
+              return (
+                <>
+                  {ack && (
+                    <Button
+                      color="primary"
+                      onClick={() => setSelectedRowAction(buildRowAction(ack.type, row))}
+                    >
+                      <Button.Prefix><ack.Icon /></Button.Prefix>
+                      {ack.label}
+                    </Button>
+                  )}
+                  <Menu>
+                    <Menu.Content>
+                      {rest.map(ra => (
+                        <Menu.Item
+                          key={ra.type}
+                          onSelect={() => setSelectedRowAction(buildRowAction(ra.type, row))}
+                        >
+                          <Menu.Prefix><ra.Icon /></Menu.Prefix>
+                          {ra.label}
+                        </Menu.Item>
+                      ))}
+                    </Menu.Content>
+                  </Menu>
+                </>
+              );
+            }}
+          </DataTable.RowActions>
           <DataTable.Pagination defaultPageSize={20} />
         </DataTable>
       )}

@@ -4,7 +4,7 @@ import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
-import { SEV_COLORS } from '../utils';
+import { SEV_COLORS, getIconComponent } from '../utils';
 
 export interface StatusCategory {
   icon: string;
@@ -112,7 +112,7 @@ export const NocStatusBar = ({
               border: `1px solid ${SEV_COLORS[cat.severity]}50`,
             }}
           >
-            <span style={{ fontSize: 14 }}>{cat.icon}</span>
+            {(() => { const I = getIconComponent(cat.icon); return I ? <I /> : null; })()}
             <Paragraph style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
               {cat.count}
             </Paragraph>

@@ -1,10 +1,64 @@
 import type { ThresholdRule } from '../types/network';
+import { sendIntent } from '@dynatrace-sdk/navigation';
+import {
+  AiIcon,
+  DocumentIcon,
+  ArrowUpIcon,
+  ListIcon,
+  CallIcon,
+  EditIcon,
+  MuteIcon,
+  RepairIcon,
+  BarChartIcon,
+  MagnifyingGlassIcon,
+  SyncIcon,
+  CheckmarkIcon,
+  WorldmapIcon,
+  NetworkDevicesIcon,
+  AnalyticsIcon,
+  CriticalIcon,
+  NetworkIcon,
+  NotificationActiveIcon,
+  OpenWithIcon,
+  LinkIcon,
+  ActionIcon,
+} from '@dynatrace/strato-icons';
 
 /**
  * Shared utility functions for the Network Observability Console.
  *
  * Extracted to eliminate duplication across components/pages.
  */
+
+/* ── Icon Map — maps string keys to Strato icon components ── */
+export const ICON_MAP: Record<string, React.ComponentType> = {
+  ai: AiIcon,
+  document: DocumentIcon,
+  'arrow-up': ArrowUpIcon,
+  list: ListIcon,
+  call: CallIcon,
+  edit: EditIcon,
+  mute: MuteIcon,
+  repair: RepairIcon,
+  'bar-chart': BarChartIcon,
+  search: MagnifyingGlassIcon,
+  sync: SyncIcon,
+  checkmark: CheckmarkIcon,
+  world: WorldmapIcon,
+  'network-devices': NetworkDevicesIcon,
+  analytics: AnalyticsIcon,
+  critical: CriticalIcon,
+  network: NetworkIcon,
+  notification: NotificationActiveIcon,
+  'open-with': OpenWithIcon,
+  link: LinkIcon,
+  action: ActionIcon,
+};
+
+/** Get a Strato icon component by key. Returns null if key is unknown. */
+export function getIconComponent(key: string): React.ComponentType | null {
+  return ICON_MAP[key] ?? null;
+}
 
 /* ── Severity Colors ──────────────────────────────── */
 export const SEV_COLORS: Record<'critical' | 'warning' | 'healthy', string> = {
@@ -95,3 +149,127 @@ export const modeBadgeStyle = (demoMode: boolean): React.CSSProperties => ({
     : 'rgba(42, 176, 111, 0.15)',
   color: demoMode ? '#818cf8' : '#2ab06f',
 });
+
+/* ── Open DQL query via intent (platform shows picker: Notebooks, Logs, etc.) ── */
+export function openQueryIntent(query: string): void {
+  try {
+    sendIntent({ 'dt.query': query });
+  } catch {
+    /* silently ignore if no app handles the intent */
+  }
+}
+
+/* ── Deep-link helpers ── */
+
+/** Resolve the environment base URL (the outer Dynatrace shell origin). */
+function getEnvOrigin(): string {
+  try {
+    const top = window.top?.location?.origin;
+    if (top) return top;
+  } catch { /* cross-origin */ }
+  return window.location.origin;
+}
+
+/** Build an absolute URL to the InfraOps device Health page. */
+export function getDeviceUrl(entityId: string): string {
+  return `${getEnvOrigin()}/ui/apps/dynatrace.infraops/explorer/Network%20devices?perspective=Health&fullPageId=${encodeURIComponent(entityId)}`;
+}
+
+/** Open the InfraOps device detail page in a new browser tab. */
+export function openDeviceDetail(entityId: string): void {
+  try { window.open(getDeviceUrl(entityId), '_blank', 'noopener'); } catch { /* */ }
+}
+
+/** Build an absolute URL to the Davis Problems detail page. */
+export function getProblemUrl(problemId: string): string {
+  return `${getEnvOrigin()}/ui/apps/dynatrace.davis.problems/problem/${encodeURIComponent(problemId)}?from=now%28%29-2h&to=now%28%29`;
+}
+
+/** Open the problem detail page in a new browser tab. */
+export function openProblemDetail(problemId: string): void {
+  try { window.open(getProblemUrl(problemId), '_blank', 'noopener'); } catch { /* */ }
+}
+
+/* ── Location-to-city mapping ── */
+/**
+ * Maps a devSysLocation / extCfgGroupLabel string from SNMP entities
+ * to a human-readable city name. Uses common IATA codes, city prefixes,
+ * and keyword matching. Falls back to the raw string if unrecognised.
+ */
+const LOCATION_MAP: Array<{ pattern: RegExp; city: string }> = [
+  // IATA / common prefix codes
+  { pattern: /\bLON\b/i,   city: 'London' },
+  { pattern: /\bHEL\b/i,   city: 'Helsinki' },
+  { pattern: /\bNYC\b/i,   city: 'New York' },
+  { pattern: /\bSFO\b/i,   city: 'San Francisco' },
+  { pattern: /\bLAX\b/i,   city: 'Los Angeles' },
+  { pattern: /\bFRA\b/i,   city: 'Frankfurt' },
+  { pattern: /\bAMS\b/i,   city: 'Amsterdam' },
+  { pattern: /\bSIN\b/i,   city: 'Singapore' },
+  { pattern: /\bTYO\b/i,   city: 'Tokyo' },
+  { pattern: /\bSYD\b/i,   city: 'Sydney' },
+  { pattern: /\bDUB\b/i,   city: 'Dublin' },
+  { pattern: /\bPAR\b/i,   city: 'Paris' },
+  { pattern: /\bBER\b/i,   city: 'Berlin' },
+  { pattern: /\bMUC\b/i,   city: 'Munich' },
+  { pattern: /\bTMP\b/i,   city: 'Tampere' },
+  { pattern: /\bOUL\b/i,   city: 'Oulu' },
+  { pattern: /\bTKU\b/i,   city: 'Turku' },
+  { pattern: /\bROV\b/i,   city: 'Rovaniemi' },
+  { pattern: /\bJYV\b/i,   city: 'Jyväskylä' },
+  { pattern: /\bKUO\b/i,   city: 'Kuopio' },
+  // Full city name keywords
+  { pattern: /london/i,     city: 'London' },
+  { pattern: /helsinki/i,   city: 'Helsinki' },
+  { pattern: /new york/i,   city: 'New York' },
+  { pattern: /san francisco/i, city: 'San Francisco' },
+  { pattern: /los angeles/i, city: 'Los Angeles' },
+  { pattern: /frankfurt/i,  city: 'Frankfurt' },
+  { pattern: /amsterdam/i,  city: 'Amsterdam' },
+  { pattern: /singapore/i,  city: 'Singapore' },
+  { pattern: /tokyo/i,      city: 'Tokyo' },
+  { pattern: /sydney/i,     city: 'Sydney' },
+  { pattern: /dublin/i,     city: 'Dublin' },
+  { pattern: /paris/i,      city: 'Paris' },
+  { pattern: /berlin/i,     city: 'Berlin' },
+  { pattern: /munich/i,     city: 'Munich' },
+  { pattern: /tampere/i,    city: 'Tampere' },
+  { pattern: /oulu/i,       city: 'Oulu' },
+  { pattern: /turku/i,      city: 'Turku' },
+  { pattern: /rovaniemi/i,  city: 'Rovaniemi' },
+  { pattern: /jyv[aä]skyl[aä]/i, city: 'Jyväskylä' },
+  { pattern: /kuopio/i,     city: 'Kuopio' },
+  { pattern: /espoo/i,      city: 'Espoo' },
+  { pattern: /vantaa/i,     city: 'Vantaa' },
+  { pattern: /pasila/i,     city: 'Helsinki' },
+  { pattern: /keilaniemi/i, city: 'Espoo' },
+  // Data center keywords (AWS regions)
+  { pattern: /eu-west-1/i,  city: 'Dublin' },
+  { pattern: /eu-west-2/i,  city: 'London' },
+  { pattern: /eu-central-1/i, city: 'Frankfurt' },
+  { pattern: /eu-north-1/i, city: 'Stockholm' },
+  { pattern: /us-east-1/i,  city: 'Virginia' },
+  { pattern: /us-west-2/i,  city: 'Oregon' },
+  { pattern: /ap-southeast-1/i, city: 'Singapore' },
+  { pattern: /ap-northeast-1/i, city: 'Tokyo' },
+];
+
+export function mapLocationToCity(raw: string | null | undefined): string {
+  if (!raw || !raw.trim()) return '';
+  const s = raw.trim();
+  for (const entry of LOCATION_MAP) {
+    if (entry.pattern.test(s)) return entry.city;
+  }
+  // If input looks like a device name (contains multiple dashes), don't use as-is
+  if ((s.match(/-/g) || []).length >= 2) return '';
+  // Fallback: return the raw string cleaned up (strip trailing whitespace/noise)
+  return s;
+}
+
+/* ── Clickable entity name style ── */
+export const entityLinkStyle: React.CSSProperties = {
+  cursor: 'pointer',
+  color: '#73b1ff',
+  textDecoration: 'none',
+  borderBottom: '1px dotted rgba(115,177,255,0.4)',
+};

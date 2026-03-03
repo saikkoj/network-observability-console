@@ -22,7 +22,7 @@ import { modeBadgeStyle } from '../utils';
 export const Data = () => {
   const { demoMode } = useDemoMode();
   const initialQuery =
-    'fetch dt.entity.network:device\n| fieldsAdd device_name = entity.name\n| fieldsAdd tags\n| fieldsAdd lifetime\n| fieldsAdd management_zones\n| fieldsAdd detectedName\n| limit 50';
+    'fetch dt.entity.network:device\n| fieldsAdd device_name = entity.name\n| fieldsAdd tags\n| fieldsAdd lifetime\n| fieldsAdd detectedName\n| limit 50';
 
   const [editorQueryString, setEditorQueryString] = useState<string>(initialQuery);
   const [queryString, setQueryString] = useState<string>(initialQuery);

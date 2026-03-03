@@ -143,18 +143,18 @@ export const DEMO_TOPOLOGY_EDGES: TopologyEdge[] = [
 
 /* ── Demo Device Inventory ────────────────────────── */
 export const DEMO_DEVICES: NetworkDevice[] = [
-  { entityId: 'NET-001', name: 'core-rtr-01',   ip: '10.0.0.1',   type: 'Router',   status: 'UP',       cpu: 42, memory: 58, problems: 0, reachability: 100,  traffic: 4.2 },
-  { entityId: 'NET-002', name: 'core-rtr-02',   ip: '10.0.0.2',   type: 'Router',   status: 'UP',       cpu: 38, memory: 52, problems: 0, reachability: 100,  traffic: 3.8 },
-  { entityId: 'NET-003', name: 'dist-sw-01',    ip: '10.0.1.1',   type: 'Switch',   status: 'UP',       cpu: 22, memory: 45, problems: 0, reachability: 100,  traffic: 1.5 },
-  { entityId: 'NET-004', name: 'dist-sw-02',    ip: '10.0.1.2',   type: 'Switch',   status: 'DEGRADED', cpu: 78, memory: 85, problems: 2, reachability: 100,  traffic: 2.1 },
-  { entityId: 'NET-005', name: 'dist-sw-03',    ip: '10.0.1.3',   type: 'Switch',   status: 'UP',       cpu: 28, memory: 40, problems: 0, reachability: 100,  traffic: 1.2 },
-  { entityId: 'NET-006', name: 'fw-01',         ip: '10.0.2.1',   type: 'Firewall', status: 'UP',       cpu: 55, memory: 62, problems: 0, reachability: 100,  traffic: 2.8 },
-  { entityId: 'NET-007', name: 'acc-sw-01',     ip: '10.0.10.1',  type: 'Switch',   status: 'UP',       cpu: 15, memory: 30, problems: 0, reachability: 100,  traffic: 0.5 },
-  { entityId: 'NET-008', name: 'acc-sw-02',     ip: '10.0.10.2',  type: 'Switch',   status: 'DOWN',     cpu: 92, memory: 88, problems: 3, reachability: 0,    traffic: 0 },
-  { entityId: 'NET-009', name: 'acc-sw-03',     ip: '10.0.10.3',  type: 'Switch',   status: 'UP',       cpu: 18, memory: 35, problems: 0, reachability: 100,  traffic: 0.4 },
-  { entityId: 'NET-010', name: 'acc-sw-04',     ip: '10.0.10.4',  type: 'Switch',   status: 'DEGRADED', cpu: 65, memory: 72, problems: 1, reachability: 100,  traffic: 0.9 },
-  { entityId: 'NET-011', name: 'edge-rtr-01',   ip: '10.0.0.10',  type: 'Router',   status: 'UP',       cpu: 35, memory: 48, problems: 0, reachability: 100,  traffic: 1.8 },
-  { entityId: 'NET-012', name: 'edge-rtr-02',   ip: '10.0.0.11',  type: 'Router',   status: 'DEGRADED', cpu: 30, memory: 42, problems: 0, reachability: 98.5, traffic: 1.6 },
+  { entityId: 'NET-001', name: 'core-rtr-01',   ip: '10.0.0.1',   type: 'Router',   status: 'UP',       cpu: 42, memory: 58, problems: 0, reachability: 100,  traffic: 4.2, location: 'Helsinki' },
+  { entityId: 'NET-002', name: 'core-rtr-02',   ip: '10.0.0.2',   type: 'Router',   status: 'UP',       cpu: 38, memory: 52, problems: 0, reachability: 100,  traffic: 3.8, location: 'Helsinki' },
+  { entityId: 'NET-003', name: 'dist-sw-01',    ip: '10.0.1.1',   type: 'Switch',   status: 'UP',       cpu: 22, memory: 45, problems: 0, reachability: 100,  traffic: 1.5, location: 'Tampere' },
+  { entityId: 'NET-004', name: 'dist-sw-02',    ip: '10.0.1.2',   type: 'Switch',   status: 'DEGRADED', cpu: 78, memory: 85, problems: 2, reachability: 100,  traffic: 2.1, location: 'London' },
+  { entityId: 'NET-005', name: 'dist-sw-03',    ip: '10.0.1.3',   type: 'Switch',   status: 'UP',       cpu: 28, memory: 40, problems: 0, reachability: 100,  traffic: 1.2, location: 'Frankfurt' },
+  { entityId: 'NET-006', name: 'fw-01',         ip: '10.0.2.1',   type: 'Firewall', status: 'UP',       cpu: 55, memory: 62, problems: 0, reachability: 100,  traffic: 2.8, location: 'Helsinki' },
+  { entityId: 'NET-007', name: 'acc-sw-01',     ip: '10.0.10.1',  type: 'Switch',   status: 'UP',       cpu: 15, memory: 30, problems: 0, reachability: 100,  traffic: 0.5, location: 'Oulu' },
+  { entityId: 'NET-008', name: 'acc-sw-02',     ip: '10.0.10.2',  type: 'Switch',   status: 'DOWN',     cpu: 92, memory: 88, problems: 3, reachability: 0,    traffic: 0,   location: 'London' },
+  { entityId: 'NET-009', name: 'acc-sw-03',     ip: '10.0.10.3',  type: 'Switch',   status: 'UP',       cpu: 18, memory: 35, problems: 0, reachability: 100,  traffic: 0.4, location: 'Rovaniemi' },
+  { entityId: 'NET-010', name: 'acc-sw-04',     ip: '10.0.10.4',  type: 'Switch',   status: 'DEGRADED', cpu: 65, memory: 72, problems: 1, reachability: 100,  traffic: 0.9, location: 'Tampere' },
+  { entityId: 'NET-011', name: 'edge-rtr-01',   ip: '10.0.0.10',  type: 'Router',   status: 'UP',       cpu: 35, memory: 48, problems: 0, reachability: 100,  traffic: 1.8, location: 'Frankfurt' },
+  { entityId: 'NET-012', name: 'edge-rtr-02',   ip: '10.0.0.11',  type: 'Router',   status: 'DEGRADED', cpu: 30, memory: 42, problems: 0, reachability: 98.5, traffic: 1.6, location: 'Dublin' },
 ];
 
 /* ── Demo Interface Data ──────────────────────────── */
@@ -179,33 +179,33 @@ function ago(mins: number): Date { return new Date(now - mins * 60_000); }
 
 export const DEMO_ALERTS: DemoAlert[] = [
   // Critical — Reachability
-  { id: 'N-2024-001', severity: 'critical', title: 'acc-sw-02 — Device unreachable (SNMP timeout)',             category: 'REACHABILITY', entity: 'acc-sw-02 (10.0.10.2)',   startedAt: ago(5),   status: 'ACTIVE', durationMins: 5 },
-  { id: 'N-2024-002', severity: 'critical', title: 'edge-rtr-02 — Intermittent reachability (98.5% → 0%)',      category: 'REACHABILITY', entity: 'edge-rtr-02 (10.0.0.11)', startedAt: ago(2),   status: 'ACTIVE', durationMins: 2 },
+  { id: 'N-2024-001', severity: 'critical', title: 'acc-sw-02 — Device unreachable (SNMP timeout)',             category: 'REACHABILITY', entity: 'acc-sw-02 (10.0.10.2)',   entityId: 'NET-008', problemId: 'P-2024-001', startedAt: ago(5),   status: 'ACTIVE', durationMins: 5,  snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041001' },
+  { id: 'N-2024-002', severity: 'critical', title: 'edge-rtr-02 — Intermittent reachability (98.5% → 0%)',      category: 'REACHABILITY', entity: 'edge-rtr-02 (10.0.0.11)', entityId: 'NET-012', problemId: 'P-2024-002', startedAt: ago(2),   status: 'ACTIVE', durationMins: 2,  snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041002' },
 
   // Critical — Saturation
-  { id: 'N-2024-003', severity: 'critical', title: 'dist-sw-02 TenGigE0/0 — Inbound load 97%',                  category: 'SATURATION',   entity: 'dist-sw-02 TenGigE0/0',   startedAt: ago(8),   status: 'ACTIVE', durationMins: 8 },
-  { id: 'N-2024-004', severity: 'major',    title: 'dist-sw-02 TenGigE0/1 — Outbound load 92%',                  category: 'SATURATION',   entity: 'dist-sw-02 TenGigE0/1',   startedAt: ago(12),  status: 'ACTIVE', durationMins: 12 },
+  { id: 'N-2024-003', severity: 'critical', title: 'dist-sw-02 TenGigE0/0 — Inbound load 97%',                  category: 'SATURATION',   entity: 'dist-sw-02 TenGigE0/0',   entityId: 'NET-004', problemId: 'P-2024-003', startedAt: ago(8),   status: 'ACTIVE', durationMins: 8,  snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041003' },
+  { id: 'N-2024-004', severity: 'major',    title: 'dist-sw-02 TenGigE0/1 — Outbound load 92%',                  category: 'SATURATION',   entity: 'dist-sw-02 TenGigE0/1',   entityId: 'NET-004', problemId: 'P-2024-004', startedAt: ago(12),  status: 'ACTIVE', durationMins: 12, snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041004' },
 
   // Major — Errors
-  { id: 'N-2024-005', severity: 'major',    title: 'acc-sw-02 Fa0/1 — 150 errors inbound, link down',            category: 'ERRORS',       entity: 'acc-sw-02 Fa0/1',         startedAt: ago(5),   status: 'ACTIVE', durationMins: 5 },
-  { id: 'N-2024-006', severity: 'major',    title: 'acc-sw-02 Fa0/2 — 200 errors inbound, 55 discards',          category: 'ERRORS',       entity: 'acc-sw-02 Fa0/2',         startedAt: ago(6),   status: 'ACTIVE', durationMins: 6 },
-  { id: 'N-2024-007', severity: 'minor',    title: 'dist-sw-02 TenGigE0/0 — 45 errors inbound (elevated)',       category: 'ERRORS',       entity: 'dist-sw-02 TenGigE0/0',   startedAt: ago(15),  status: 'ACTIVE', durationMins: 15 },
+  { id: 'N-2024-005', severity: 'major',    title: 'acc-sw-02 Fa0/1 — 150 errors inbound, link down',            category: 'ERRORS',       entity: 'acc-sw-02 Fa0/1',         entityId: 'NET-008', problemId: 'P-2024-005', startedAt: ago(5),   status: 'ACTIVE', durationMins: 5,  snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041005' },
+  { id: 'N-2024-006', severity: 'major',    title: 'acc-sw-02 Fa0/2 — 200 errors inbound, 55 discards',          category: 'ERRORS',       entity: 'acc-sw-02 Fa0/2',         entityId: 'NET-008', problemId: 'P-2024-006', startedAt: ago(6),   status: 'ACTIVE', durationMins: 6,  snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041006' },
+  { id: 'N-2024-007', severity: 'minor',    title: 'dist-sw-02 TenGigE0/0 — 45 errors inbound (elevated)',       category: 'ERRORS',       entity: 'dist-sw-02 TenGigE0/0',   entityId: 'NET-004', problemId: 'P-2024-007', startedAt: ago(15),  status: 'ACTIVE', durationMins: 15 },
 
   // Major — Saturation
-  { id: 'N-2024-008', severity: 'major',    title: 'acc-sw-04 Gi0/1 — Inbound load 82%',                         category: 'SATURATION',   entity: 'acc-sw-04 Gi0/1',         startedAt: ago(20),  status: 'ACTIVE', durationMins: 20 },
+  { id: 'N-2024-008', severity: 'major',    title: 'acc-sw-04 Gi0/1 — Inbound load 82%',                         category: 'SATURATION',   entity: 'acc-sw-04 Gi0/1',         entityId: 'NET-010', problemId: 'P-2024-008', startedAt: ago(20),  status: 'ACTIVE', durationMins: 20 },
 
   // Minor — Traffic
-  { id: 'N-2024-009', severity: 'minor',    title: 'core-rtr-01 — BGP session flapping with upstream AS',        category: 'TRAFFIC',      entity: 'core-rtr-01 (10.0.0.1)',  startedAt: ago(30),  status: 'ACTIVE', durationMins: 30 },
-  { id: 'N-2024-010', severity: 'minor',    title: 'AWS TGW — Inter-region traffic spike (+40% above baseline)', category: 'TRAFFIC',      entity: 'AWS TGW',                 startedAt: ago(25),  status: 'ACTIVE', durationMins: 25 },
+  { id: 'N-2024-009', severity: 'minor',    title: 'core-rtr-01 — BGP session flapping with upstream AS',        category: 'TRAFFIC',      entity: 'core-rtr-01 (10.0.0.1)',  entityId: 'NET-001', problemId: 'P-2024-009', startedAt: ago(30),  status: 'ACTIVE', durationMins: 30 },
+  { id: 'N-2024-010', severity: 'minor',    title: 'AWS TGW — Inter-region traffic spike (+40% above baseline)', category: 'TRAFFIC',      entity: 'AWS TGW',                 problemId: 'P-2024-010', startedAt: ago(25),  status: 'ACTIVE', durationMins: 25 },
 
   // Info
-  { id: 'N-2024-011', severity: 'info',     title: 'dist-sw-02 — CPU usage elevated to 78%',                     category: 'SATURATION',   entity: 'dist-sw-02 (10.0.1.2)',   startedAt: ago(18),  status: 'ACTIVE', durationMins: 18 },
-  { id: 'N-2024-012', severity: 'info',     title: 'Firmware upgrade scheduled for core-rtr-02',                  category: 'REACHABILITY', entity: 'core-rtr-02 (10.0.0.2)',  startedAt: ago(45),  status: 'ACTIVE', durationMins: 45 },
+  { id: 'N-2024-011', severity: 'info',     title: 'dist-sw-02 — CPU usage elevated to 78%',                     category: 'SATURATION',   entity: 'dist-sw-02 (10.0.1.2)',   entityId: 'NET-004', problemId: 'P-2024-011', startedAt: ago(18),  status: 'ACTIVE', durationMins: 18 },
+  { id: 'N-2024-012', severity: 'info',     title: 'Firmware upgrade scheduled for core-rtr-02',                  category: 'REACHABILITY', entity: 'core-rtr-02 (10.0.0.2)',  entityId: 'NET-002', problemId: 'P-2024-012', startedAt: ago(45),  status: 'ACTIVE', durationMins: 45 },
 
   // Resolved
-  { id: 'N-2024-013', severity: 'major',    title: 'acc-sw-03 — Interface flap resolved (auto-dampened)',          category: 'ERRORS',       entity: 'acc-sw-03 Gi0/0',         startedAt: ago(90),  status: 'CLOSED', durationMins: 35 },
-  { id: 'N-2024-014', severity: 'critical', title: 'fw-01 — HA failover completed, primary restored',             category: 'REACHABILITY', entity: 'fw-01 (10.0.2.1)',        startedAt: ago(120), status: 'CLOSED', durationMins: 15 },
-  { id: 'N-2024-015', severity: 'minor',    title: 'dist-sw-01 — CRC errors cleared after cable replacement',     category: 'ERRORS',       entity: 'dist-sw-01 Gi0/2',        startedAt: ago(180), status: 'CLOSED', durationMins: 60 },
+  { id: 'N-2024-013', severity: 'major',    title: 'acc-sw-03 — Interface flap resolved (auto-dampened)',          category: 'ERRORS',       entity: 'acc-sw-03 Gi0/0',         entityId: 'NET-009', problemId: 'P-2024-013', startedAt: ago(90),  status: 'CLOSED', durationMins: 35, snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041013' },
+  { id: 'N-2024-014', severity: 'critical', title: 'fw-01 — HA failover completed, primary restored',             category: 'REACHABILITY', entity: 'fw-01 (10.0.2.1)',        entityId: 'NET-006', problemId: 'P-2024-014', startedAt: ago(120), status: 'CLOSED', durationMins: 15, snowIncidentUrl: 'https://demo.service-now.com/nav_to.do?uri=incident.do?sys_id=INC0041014' },
+  { id: 'N-2024-015', severity: 'minor',    title: 'dist-sw-01 — CRC errors cleared after cable replacement',     category: 'ERRORS',       entity: 'dist-sw-01 Gi0/2',        entityId: 'NET-003', problemId: 'P-2024-015', startedAt: ago(180), status: 'CLOSED', durationMins: 60 },
 ];
 
 /* ══════════════════════════════════════════════════════

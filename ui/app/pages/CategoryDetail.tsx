@@ -16,7 +16,7 @@ import { AlertList } from '../components/AlertList';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_ALERTS, DEMO_KPI, DEMO_KPI_WEEK_AGO, DEMO_SECONDARY_KPI, DEMO_SECONDARY_KPI_WEEK_AGO, DEMO_CHART_DATA } from '../data/demoData';
 import type { NetworkCategoryId } from '../types/network';
-import { computeSeverity, toNum, formatKpiValue, SEV_COLORS } from '../utils';
+import { computeSeverity, toNum, formatKpiValue, SEV_COLORS, getIconComponent } from '../utils';
 
 /* Map category ID → DQL filter value */
 const CATEGORY_EVENT_MAP: Record<string, string> = {
@@ -101,11 +101,13 @@ export const CategoryDetail = () => {
     overflowX: 'auto',
   };
 
+  const CategoryIcon = getIconComponent(category.icon);
+
   return (
     <Flex flexDirection="column" padding={32} gap={24}>
       <Flex alignItems="center" gap={8}>
         <Button variant="default" onClick={() => navigate('/')}>← Back</Button>
-        <span style={{ fontSize: 24 }}>{category.icon}</span>
+        {CategoryIcon && <CategoryIcon />}
         <Heading level={2}>{category.title}</Heading>
         <span
           style={{
@@ -280,7 +282,10 @@ export const CategoryDetail = () => {
                   boxShadow: BoxShadows.Surface.Raised.Rest,
                 }}
               >
-                <Heading level={4}>{action.icon} {action.label}</Heading>
+                <Flex alignItems="center" gap={8}>
+                  {(() => { const I = getIconComponent(action.icon); return I ? <I /> : null; })()}
+                  <Heading level={4}>{action.label}</Heading>
+                </Flex>
                 <Paragraph>{action.description}</Paragraph>
                 <Paragraph style={{ fontSize: 12 }}>
                   <strong>Type:</strong> {action.type}

@@ -5,7 +5,6 @@ import { DataTable } from '@dynatrace/strato-components-preview/tables';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
-import type { TableColumn } from '@dynatrace/strato-components-preview/tables';
 import { useDql } from '@dynatrace-sdk/react-hooks';
 
 import { useDemoMode } from '../hooks/useDemoMode';
@@ -47,7 +46,7 @@ function formatTraffic(gbps: number): string {
 function formatErrors(val: number): React.ReactElement {
   const color = val > 100 ? '#dc172a' : val > 0 ? '#fd8232' : '#2ab06f';
   return (
-    <span style={{ fontVariantNumeric: 'tabular-nums', color, fontWeight: val > 0 ? 600 : 400 }}>
+    <span style={{ fontVariantNumeric: 'tabular-nums', color }}>
       {val.toLocaleString()}
     </span>
   );
@@ -98,23 +97,22 @@ export const InterfaceTable = ({ liveInterfaces }: InterfaceTableProps) => {
 
   const interfaces = demoMode ? DEMO_INTERFACES : (liveInterfaces ?? liveMapped);
 
-  const columns = useMemo<TableColumn[]>(() => [
+  const columns: any[] = useMemo(() => [
     {
+      id: 'deviceName',
       header: 'Device',
       accessor: 'deviceName',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontWeight: 600, fontSize: 12 }}>{value}</span>
-      ),
+      columnType: 'text',
       width: 130,
     },
     {
+      id: 'name',
       header: 'Interface',
       accessor: 'name',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{value}</span>
-      ),
+      columnType: 'text',
     },
     {
+      id: 'status',
       header: 'Status',
       accessor: 'status',
       cell: ({ value }: { value: string }) => {
@@ -122,7 +120,7 @@ export const InterfaceTable = ({ liveInterfaces }: InterfaceTableProps) => {
         return (
           <span
             style={{
-              padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+              padding: '2px 8px', borderRadius: 10,
               background: s.bg, color: s.color, border: `1px solid ${s.color}40`,
               whiteSpace: 'nowrap',
             }}
@@ -134,54 +132,62 @@ export const InterfaceTable = ({ liveInterfaces }: InterfaceTableProps) => {
       width: 100,
     },
     {
+      id: 'inLoad',
       header: 'In Load',
       accessor: 'inLoad',
       cell: ({ value }: { value: number }) => loadBar(value),
       width: 130,
     },
     {
+      id: 'outLoad',
       header: 'Out Load',
       accessor: 'outLoad',
       cell: ({ value }: { value: number }) => loadBar(value),
       width: 130,
     },
     {
+      id: 'inErrors',
       header: 'In Errors',
       accessor: 'inErrors',
       cell: ({ value }: { value: number }) => formatErrors(value),
       width: 80,
     },
     {
+      id: 'outErrors',
       header: 'Out Errors',
       accessor: 'outErrors',
       cell: ({ value }: { value: number }) => formatErrors(value),
       width: 80,
     },
     {
+      id: 'inDiscards',
       header: 'In Discards',
       accessor: 'inDiscards',
       cell: ({ value }: { value: number }) => formatErrors(value),
       width: 90,
     },
     {
+      id: 'outDiscards',
       header: 'Out Discards',
       accessor: 'outDiscards',
       cell: ({ value }: { value: number }) => formatErrors(value),
       width: 90,
     },
     {
+      id: 'trafficIn',
       header: 'Traffic In',
       accessor: 'trafficIn',
       cell: ({ value }: { value: number }) => (
-        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{formatTraffic(value)}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTraffic(value)}</span>
       ),
       width: 100,
     },
     {
+      id: 'trafficOut',
       header: 'Traffic Out',
       accessor: 'trafficOut',
       cell: ({ value }: { value: number }) => (
-        <span style={{ fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{formatTraffic(value)}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTraffic(value)}</span>
       ),
       width: 100,
     },
@@ -208,8 +214,8 @@ export const InterfaceTable = ({ liveInterfaces }: InterfaceTableProps) => {
         style={{ padding: '12px 20px', borderBottom: `1px solid ${Colors.Border.Neutral.Default}` }}
       >
         <Flex alignItems="baseline" gap={12}>
-          <Heading level={5} style={{ margin: 0 }}>🔌 Interface Health</Heading>
-          <Paragraph style={{ fontSize: 12, opacity: 0.6 }}>
+          <Heading level={5} style={{ margin: 0 }}>Interface Health</Heading>
+          <Paragraph style={{ opacity: 0.6 }}>
             {interfaces.length} interfaces · {upCount} up · {downCount} down
           </Paragraph>
         </Flex>
@@ -222,11 +228,10 @@ export const InterfaceTable = ({ liveInterfaces }: InterfaceTableProps) => {
       ) : (
         <DataTable
           data={interfaces}
-          columns={columns}
+          columns={columns as any}
           sortable
           fullWidth
-          variant={{ rowDensity: 'condensed' }}
-          height={480}
+          variant={{ verticalDividers: true }}
         >
           <DataTable.Pagination defaultPageSize={25} />
         </DataTable>

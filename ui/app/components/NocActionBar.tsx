@@ -5,9 +5,11 @@ import { Heading, Paragraph } from '@dynatrace/strato-components/typography';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
+import { ActionIcon } from '@dynatrace/strato-icons';
 import { NOC_PRIMARY_ACTIONS, NOC_SECONDARY_ACTIONS } from '../data/networkCategories';
 import { ActionModal } from './ActionModal';
 import type { NetworkAction } from '../types/network';
+import { getIconComponent } from '../utils';
 
 /* ── Button variant mapping by actionSeverity ─────────── */
 
@@ -22,18 +24,15 @@ const ActionButton = ({
 }) => {
   const severity = action.actionSeverity ?? 'secondary';
   const variant = severity === 'danger' ? 'emphasized' : severity === 'primary' ? 'accent' : 'default';
+  const IconComp = getIconComponent(action.icon);
 
   return (
     <Button
       variant={variant}
       onClick={onClick}
-      style={{
-        fontSize: compact ? 11 : 12,
-        padding: compact ? '5px 10px' : '7px 14px',
-        whiteSpace: 'nowrap',
-      }}
+      size={compact ? 'condensed' : 'default'}
     >
-      <span style={{ fontSize: compact ? 13 : 15 }}>{action.icon}</span>
+      {IconComp && <Button.Prefix><IconComp /></Button.Prefix>}
       {action.label}
     </Button>
   );
@@ -69,7 +68,7 @@ export const NocActionBar = () => {
           }}
         >
           <Flex alignItems="center" gap={8} style={{ marginRight: 8 }}>
-            <span style={{ fontSize: 14 }}>⚡</span>
+            <ActionIcon />
             <Heading level={6} style={{ margin: 0, fontSize: 11, opacity: 0.6, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               Actions
             </Heading>
@@ -87,8 +86,8 @@ export const NocActionBar = () => {
 
           <Button
             variant="default"
+            size="condensed"
             onClick={() => setShowMore(!showMore)}
-            style={{ fontSize: 11, padding: '3px 10px' }}
           >
             {showMore ? 'Less ▲' : 'More ▼'}
           </Button>

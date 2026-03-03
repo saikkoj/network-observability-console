@@ -95,6 +95,8 @@ export interface TopologyNode {
   type?: string;
   cpu?: number;
   memory?: number;
+  /** City/location derived from devSysLocation */
+  location?: string;
 }
 
 /** How the edge was discovered */
@@ -124,6 +126,8 @@ export interface NetworkDevice {
   problems: number;
   reachability: number;
   traffic: number; // Gbps
+  /** City/location derived from devSysLocation */
+  location?: string;
 }
 
 export interface NetworkInterface {
@@ -217,9 +221,15 @@ export interface DemoAlert {
   title: string;
   category: 'REACHABILITY' | 'SATURATION' | 'ERRORS' | 'TRAFFIC';
   entity: string;
+  /** Dynatrace entity ID for navigation (e.g. CUSTOM_DEVICE-xxx) */
+  entityId?: string;
+  /** Problem display_id for linking to Dynatrace problems */
+  problemId?: string;
   startedAt: Date;
   status: 'ACTIVE' | 'CLOSED';
   durationMins: number;
+  /** ServiceNow incident URL — populated by background workflow */
+  snowIncidentUrl?: string;
 }
 
 export type WorkflowStatus = 'idle' | 'loading' | 'success' | 'error';

@@ -5,13 +5,13 @@ import { DataTable } from '@dynatrace/strato-components-preview/tables';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
-import type { TableColumn } from '@dynatrace/strato-components-preview/tables';
 import { useDql } from '@dynatrace-sdk/react-hooks';
 
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_DEVICES } from '../data/demoData';
 import { NETWORK_QUERIES } from '../data/networkCategories';
 import type { NetworkDevice } from '../types/network';
+import { getDeviceUrl, openDeviceDetail, mapLocationToCity, entityLinkStyle } from '../utils';
 
 /* ── Status styling ───────────────────────────────── */
 const STATUS_STYLE: Record<string, { color: string; bg: string }> = {
@@ -73,9 +73,11 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
       const problems = toNum(r['problems']);
       const status: NetworkDevice['status'] =
         problems > 0 ? 'DEGRADED' : cpu > 90 || mem > 90 ? 'DEGRADED' : 'UP';
+      // Derive city from device name prefix (e.g., LON-Juniper-T4000-Core-Router → London)
+      const deviceName = String(r['deviceName'] ?? '');
       return {
         entityId: String(r['id'] ?? ''),
-        name: String(r['deviceName'] ?? ''),
+        name: deviceName,
         ip: String(r['ip'] ?? ''),
         type: String(r['deviceType'] ?? ''),
         status,
@@ -84,34 +86,58 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
         problems,
         reachability: 100,
         traffic: 0,
+        location: mapLocationToCity(deviceName) || undefined,
       };
     });
   }, [demoMode, liveData]);
 
   const devices = demoMode ? DEMO_DEVICES : (liveDevices ?? liveMapped);
 
-  const columns = useMemo<TableColumn[]>(() => [
+  const columns: any[] = useMemo(() => [
     {
+      id: 'name',
       header: 'Device',
       accessor: 'name',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontWeight: 600 }}>{value}</span>
-      ),
+      cell: ({ value, rowData }: { value: string; rowData: NetworkDevice }) => {
+        const eid = rowData.entityId;
+        if (!eid) return <span>{value}</span>;
+        return (
+          <a
+            href={getDeviceUrl(eid)}
+            target="_blank"
+            rel="noopener"
+            style={entityLinkStyle}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); openDeviceDetail(eid); }}
+            title={`Open ${value} in Infra & Operations`}
+          >
+            {value}
+          </a>
+        );
+      },
     },
     {
+      id: 'location',
+      header: 'Location',
+      accessor: (row: NetworkDevice) => row.location ?? '',
+      columnType: 'text',
+      width: 120,
+    },
+    {
+      id: 'ip',
       header: 'IP Address',
       accessor: 'ip',
-      cell: ({ value }: { value: string }) => (
-        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{value}</span>
-      ),
+      columnType: 'text',
       width: 130,
     },
     {
+      id: 'type',
       header: 'Type',
       accessor: 'type',
+      columnType: 'text',
       width: 90,
     },
     {
+      id: 'status',
       header: 'Status',
       accessor: 'status',
       cell: ({ value }: { value: string }) => {
@@ -119,7 +145,7 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
         return (
           <span
             style={{
-              padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+              padding: '2px 8px', borderRadius: 10,
               background: s.bg, color: s.color, border: `1px solid ${s.color}40`,
             }}
           >
@@ -130,18 +156,21 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
       width: 90,
     },
     {
+      id: 'cpu',
       header: 'CPU',
       accessor: 'cpu',
       cell: ({ value }: { value: number }) => percentBar(value),
       width: 140,
     },
     {
+      id: 'memory',
       header: 'Memory',
       accessor: 'memory',
       cell: ({ value }: { value: number }) => percentBar(value),
       width: 140,
     },
     {
+      id: 'problems',
       header: 'Problems',
       accessor: 'problems',
       cell: ({ value }: { value: number }) => (
@@ -158,6 +187,7 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
       width: 80,
     },
     {
+      id: 'reachability',
       header: 'Reachability',
       accessor: 'reachability',
       cell: ({ value }: { value: number }) => (
@@ -168,10 +198,11 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
       width: 100,
     },
     {
+      id: 'traffic',
       header: 'Traffic',
       accessor: 'traffic',
       cell: ({ value }: { value: number }) => (
-        <span style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{formatTraffic(value)}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatTraffic(value)}</span>
       ),
       width: 100,
     },
@@ -195,8 +226,8 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
         style={{ padding: '12px 20px', borderBottom: `1px solid ${Colors.Border.Neutral.Default}` }}
       >
         <Flex alignItems="baseline" gap={12}>
-          <Heading level={5} style={{ margin: 0 }}>🖧 Network Device Inventory</Heading>
-          <Paragraph style={{ fontSize: 12, opacity: 0.6 }}>
+          <Heading level={5} style={{ margin: 0 }}>Network Device Inventory</Heading>
+          <Paragraph style={{ opacity: 0.6 }}>
             {devices.length} devices
           </Paragraph>
         </Flex>
@@ -209,11 +240,10 @@ export const DeviceTable = ({ liveDevices }: DeviceTableProps) => {
       ) : (
         <DataTable
           data={devices}
-          columns={columns}
+          columns={columns as any}
           sortable
           fullWidth
-          variant={{ rowDensity: 'condensed' }}
-          height={480}
+          variant={{ verticalDividers: true }}
         >
           <DataTable.Pagination defaultPageSize={25} />
         </DataTable>

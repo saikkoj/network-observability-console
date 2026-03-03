@@ -6,6 +6,7 @@ import { Modal } from '@dynatrace/strato-components-preview/overlays';
 import { CheckmarkIcon, CriticalIcon } from '@dynatrace/strato-icons';
 import { useWorkflowTrigger } from '../hooks/useWorkflowTrigger';
 import type { NetworkAction } from '../types/network';
+import { getIconComponent } from '../utils';
 
 const spinKeyframes = `
 @keyframes spin {
@@ -49,15 +50,17 @@ export const ActionModal = ({ show, onDismiss, action }: ActionModalProps) => {
       </Flex>
     );
 
+  const IconComp = getIconComponent(action.icon);
+
   return (
     <>
       <style>{spinKeyframes}</style>
-      <Modal show={show} onDismiss={handleClose} title={`${action.icon} ${action.label}`} size="small" footer={footer}>
+      <Modal show={show} onDismiss={handleClose} title={action.label} size="small" footer={footer}>
       {!confirmed && <Paragraph>{action.confirmMessage}</Paragraph>}
 
       {status === 'loading' && (
         <Flex gap={8} alignItems="center">
-          <span style={{ fontSize: 18, animation: 'spin 1s linear infinite' }}>{action.icon}</span>
+          {IconComp && <span style={{ animation: 'spin 1s linear infinite' }}><IconComp /></span>}
           <Paragraph>Deploying agent…</Paragraph>
         </Flex>
       )}

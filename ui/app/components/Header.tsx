@@ -6,7 +6,6 @@ import {
   ToggleButtonGroupItem,
 } from '@dynatrace/strato-components-preview/buttons';
 import { useDemoMode } from '../hooks/useDemoMode';
-import { NETWORK_CATEGORIES } from '../data/networkCategories';
 
 export const Header = () => {
   const { demoMode, setDemoMode } = useDemoMode();
@@ -16,27 +15,19 @@ export const Header = () => {
       <AppHeader.NavItems>
         <AppHeader.AppNavLink as={Link} to="/" />
         <AppHeader.NavItem as={Link} to="/topology">
-          🗺️ Topology
+          Topology
         </AppHeader.NavItem>
         <AppHeader.NavItem as={Link} to="/devices">
-          🖥️ Devices
+          Devices
         </AppHeader.NavItem>
         <AppHeader.NavItem as={Link} to="/interfaces">
-          🔌 Interfaces
+          Interfaces
         </AppHeader.NavItem>
-        <AppHeader.NavItem as={Link} to="/flows">
-          🌊 Flow Analytics
-        </AppHeader.NavItem>
-        {NETWORK_CATEGORIES.filter(c => c.id !== 'global').map((cat) => (
-          <AppHeader.NavItem key={cat.id} as={Link} to={`/category/${cat.id}`}>
-            {cat.icon} {cat.title}
-          </AppHeader.NavItem>
-        ))}
         <AppHeader.NavItem as={Link} to="/detectors">
-          🔔 Anomaly Detectors
+          Detectors
         </AppHeader.NavItem>
         <AppHeader.NavItem as={Link} to="/data">
-          Explore Data
+          Data
         </AppHeader.NavItem>
       </AppHeader.NavItems>
 

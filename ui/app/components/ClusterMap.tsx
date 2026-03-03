@@ -122,14 +122,9 @@ export const ClusterMap = ({
 
   const resolvedViewState = viewState ?? defaultCenter;
 
-  /*
-   * Render MapView directly — no wrapper div.
-   * MapView's internal _ChartLayout handles all sizing via _useGraphSize().
-   * Wrapping in extra positioned/overflow containers breaks the internal
-   * ResizeObserver measurement and results in 0×0 canvas.
-   */
   return (
-    <MapView height={height} initialViewState={resolvedViewState}>
+    <div style={{ width: '100%' }}>
+      <MapView height={height} initialViewState={resolvedViewState}>
       {bubbleData.length > 0 && (
         <BubbleLayer
           data={bubbleData}
@@ -220,5 +215,6 @@ export const ClusterMap = ({
         <CategoricalLegend colorPalette={LEGEND_PALETTE} position="bottom" />
       )}
     </MapView>
+    </div>
   );
 };

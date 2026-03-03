@@ -23,7 +23,7 @@ function nocActions(categoryId: string, categoryLabel: string): NetworkAction[] 
     {
       type: 'ai-triage',
       label: 'AI Triage',
-      icon: '🤖',
+      icon: 'ai',
       description: `Activate an autonomous AI agent to analyze all ${categoryLabel} alerts. The agent correlates events across devices, identifies root causes, and assigns priority levels based on network impact.`,
       confirmMessage: `Deploy AI triage agent for ${categoryLabel} problems?`,
       successMessage: `AI Triage agent deployed! Analyzing ${categoryLabel} alerts.`,
@@ -32,8 +32,8 @@ function nocActions(categoryId: string, categoryLabel: string): NetworkAction[] 
     },
     {
       type: 'create-ticket',
-      label: 'Create Tickets',
-      icon: '🎫',
+      label: 'Tickets',
+      icon: 'document',
       description: `Auto-generate incident tickets in ServiceNow for all unacknowledged ${categoryLabel} problems with AI-enriched context.`,
       confirmMessage: `Create incident tickets for all open ${categoryLabel} problems?`,
       successMessage: `Ticket creation workflow started!`,
@@ -43,7 +43,7 @@ function nocActions(categoryId: string, categoryLabel: string): NetworkAction[] 
     {
       type: 'escalate',
       label: 'Escalate',
-      icon: '⬆️',
+      icon: 'arrow-up',
       description: `Escalate all critical ${categoryLabel} problems to the network L2/L3 on-call team via PagerDuty.`,
       confirmMessage: `Escalate critical ${categoryLabel} problems to L2/L3?`,
       successMessage: `Escalation triggered! Network L2/L3 on-call team notified.`,
@@ -60,7 +60,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
   /* ── 1. Global Overview ────────────────────────── */
   {
     id: 'global',
-    icon: '🌐',
+    icon: 'world',
     title: 'Global Overview',
     subtitle: 'All network device problems combined',
     kpi: {
@@ -110,8 +110,8 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ...nocActions('global', 'all network'),
       {
         type: 'situation-report',
-        label: 'Situation Report',
-        icon: '📋',
+        label: 'Sit Rep',
+        icon: 'list',
         description: 'Generate an AI situation report covering all active network problems including topology impact and remediation plan.',
         confirmMessage: 'Generate an AI situation report for all active network problems?',
         successMessage: 'AI generating situation report — will be delivered within 3 minutes.',
@@ -124,7 +124,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
   /* ── 2. Reachability ───────────────────────────── */
   {
     id: 'reachability',
-    icon: '📡',
+    icon: 'network-devices',
     title: 'Reachability',
     subtitle: 'Device reachability & availability monitoring',
     kpi: {
@@ -201,7 +201,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       {
         type: 'auto-remediate',
         label: 'Auto-Remediate',
-        icon: '🔧',
+        icon: 'repair',
         description: 'Trigger automated SNMP polling restart and failover checks for unreachable devices.',
         confirmMessage: 'Activate auto-remediation for unreachable devices?',
         successMessage: 'Auto-remediation agent deployed!',
@@ -214,7 +214,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
   /* ── 3. Saturation ─────────────────────────────── */
   {
     id: 'saturation',
-    icon: '📈',
+    icon: 'analytics',
     title: 'Saturation',
     subtitle: 'Interface utilization & capacity alerts',
     kpi: {
@@ -287,7 +287,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       {
         type: 'capacity-report',
         label: 'Capacity Report',
-        icon: '📊',
+        icon: 'bar-chart',
         description: 'Generate an AI capacity analysis report showing utilization trends, projected exhaustion dates, and recommended upgrades.',
         confirmMessage: 'Generate a capacity planning report?',
         successMessage: 'Capacity report generation started!',
@@ -300,7 +300,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
   /* ── 4. Errors & Discards ──────────────────────── */
   {
     id: 'errors',
-    icon: '❌',
+    icon: 'critical',
     title: 'Errors & Discards',
     subtitle: 'Interface errors, discards, and packet loss',
     kpi: {
@@ -370,8 +370,8 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       ...nocActions('errors', 'error'),
       {
         type: 'root-cause',
-        label: 'Root Cause Analysis',
-        icon: '🔍',
+        label: 'Root Cause',
+        icon: 'search',
         description: 'Launch AI root-cause analysis for interface error spikes. The agent correlates errors with topology changes, CRC issues, and link flapping.',
         confirmMessage: 'Run AI root cause analysis for interface errors?',
         successMessage: 'Root cause analysis agent deployed!',
@@ -384,7 +384,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
   /* ── 5. Traffic ────────────────────────────────── */
   {
     id: 'traffic',
-    icon: '🔄',
+    icon: 'network',
     title: 'Traffic',
     subtitle: 'Bandwidth utilization & flow analytics',
     kpi: {
@@ -458,7 +458,7 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
       {
         type: 'traffic-reroute',
         label: 'Traffic Reroute',
-        icon: '🔀',
+        icon: 'sync',
         description: 'Trigger AI-powered traffic rerouting to offload saturated links. The agent evaluates alternative paths and redistributes load.',
         confirmMessage: 'Activate traffic rerouting for congested links?',
         successMessage: 'Traffic reroute agent deployed!',
@@ -477,8 +477,8 @@ export const NETWORK_CATEGORIES: NetworkCategory[] = [
 export const NOC_PRIMARY_ACTIONS: NetworkAction[] = [
   {
     type: 'ai-triage',
-    label: 'AI Triage All',
-    icon: '🤖',
+    label: 'AI Triage',
+    icon: 'ai',
     actionSeverity: 'primary',
     description: 'Deploy an autonomous AI agent to triage ALL active network problems. Correlates events, identifies root causes, and produces a prioritized action plan.',
     confirmMessage: 'Deploy AI triage agent for all active network problems?',
@@ -488,8 +488,8 @@ export const NOC_PRIMARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'situation-report',
-    label: 'Situation Report',
-    icon: '📋',
+    label: 'Sit Rep',
+    icon: 'list',
     actionSeverity: 'primary',
     description: 'Generate a comprehensive AI situation report covering all active network incidents with topology impact analysis.',
     confirmMessage: 'Generate an AI situation report for all active network problems?',
@@ -499,8 +499,8 @@ export const NOC_PRIMARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'notify-oncall',
-    label: 'Notify On-Call',
-    icon: '📞',
+    label: 'Page On-Call',
+    icon: 'call',
     actionSeverity: 'danger',
     description: 'Page the on-call network engineer via PagerDuty with an AI-generated situation brief.',
     confirmMessage: 'Page the on-call team with an AI-generated situation brief?',
@@ -510,8 +510,8 @@ export const NOC_PRIMARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'create-ticket',
-    label: 'Create Tickets',
-    icon: '🎫',
+    label: 'Tickets',
+    icon: 'document',
     actionSeverity: 'primary',
     description: 'Auto-generate ServiceNow incident tickets for all unacknowledged network problems.',
     confirmMessage: 'Create incident tickets for all open network problems?',
@@ -521,8 +521,8 @@ export const NOC_PRIMARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'escalate',
-    label: 'Escalate Critical',
-    icon: '⬆️',
+    label: 'Escalate',
+    icon: 'arrow-up',
     actionSeverity: 'danger',
     description: 'Escalate all critical-severity network problems to the L2/L3 network engineering team.',
     confirmMessage: 'Escalate all critical network problems to L2/L3?',
@@ -536,8 +536,8 @@ export const NOC_PRIMARY_ACTIONS: NetworkAction[] = [
 export const NOC_SECONDARY_ACTIONS: NetworkAction[] = [
   {
     type: 'shift-handoff',
-    label: 'Shift Handoff',
-    icon: '📝',
+    label: 'Handoff',
+    icon: 'edit',
     actionSeverity: 'secondary',
     description: 'Generate an AI-powered shift handoff report summarizing all network incidents and ongoing remediations.',
     confirmMessage: 'Generate a shift handoff report?',
@@ -547,8 +547,8 @@ export const NOC_SECONDARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'flap-suppress',
-    label: 'Flap Suppression',
-    icon: '🔇',
+    label: 'Flap Suppress',
+    icon: 'mute',
     actionSeverity: 'secondary',
     description: 'Activate interface flap suppression. Auto-dampens flapping interface alerts for a configurable period.',
     confirmMessage: 'Activate interface flap suppression?',
@@ -558,8 +558,8 @@ export const NOC_SECONDARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'maintenance',
-    label: 'Maintenance Mode',
-    icon: '🔧',
+    label: 'Maint Mode',
+    icon: 'repair',
     actionSeverity: 'secondary',
     description: 'Put selected network devices into maintenance mode. Alerts will be suppressed.',
     confirmMessage: 'Enter maintenance mode?',
@@ -569,8 +569,8 @@ export const NOC_SECONDARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'bulk-acknowledge',
-    label: 'Ack All Active',
-    icon: '✅',
+    label: 'Ack All',
+    icon: 'checkmark',
     actionSeverity: 'secondary',
     description: 'Bulk-acknowledge all active network problems.',
     confirmMessage: 'Acknowledge ALL active network problems?',
@@ -580,8 +580,8 @@ export const NOC_SECONDARY_ACTIONS: NetworkAction[] = [
   },
   {
     type: 'correlate',
-    label: 'Correlate Incidents',
-    icon: '🔗',
+    label: 'Correlate',
+    icon: 'link',
     actionSeverity: 'secondary',
     description: 'Run AI correlation analysis across all active network incidents to identify common root causes and shared topology paths.',
     confirmMessage: 'Run AI cross-incident correlation?',

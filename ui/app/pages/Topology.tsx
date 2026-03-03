@@ -11,16 +11,47 @@ import type { MapViewState } from '../components/ClusterMap';
 import { TopologyMap } from '../components/TopologyMap';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { useClusterData } from '../hooks/useClusterData';
+import type { RegionDevice } from '../hooks/useClusterData';
 import { useTopologyData } from '../hooks/useTopologyData';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
-import { modeBadgeStyle } from '../utils';
-import type { DrillDownLevel, TopologySite, TopologyNode, HealthSummary } from '../types/network';
+import { modeBadgeStyle, getDeviceUrl, openDeviceDetail, entityLinkStyle } from '../utils';
+import type { DrillDownLevel, TopologySite, TopologyNode, HealthSummary, DeviceRole } from '../types/network';
+import {
+  SmartscapeIcon,
+  DataCenterIcon,
+  OfficeFilledIcon,
+  NetworkDevicesIcon,
+  NetworkIcon,
+  ConnectorIcon,
+  LocationMarkerIcon,
+  WorldmapIcon,
+  NodeIcon,
+  SecurityIcon,
+  HostsIcon,
+  DesktopIcon,
+} from '@dynatrace/strato-icons';
 
-/* ── Site type icons ── */
-const SITE_ICON: Record<string, string> = {
-  'data-center': '🏢', office: '🏬', pop: '📡', 'cell-tower': '📶', exchange: '🔄',
+/* ── Site type icons (Strato components) ── */
+const SITE_ICON_COMPONENT: Record<string, React.ComponentType> = {
+  'data-center': DataCenterIcon,
+  office: OfficeFilledIcon,
+  pop: NetworkDevicesIcon,
+  'cell-tower': NetworkIcon,
+  exchange: ConnectorIcon,
+};
+const DEFAULT_SITE_ICON = LocationMarkerIcon;
+
+/* ── Device role icon components for GenericGrid ── */
+const ROLE_ICON_COMPONENT: Record<DeviceRole, React.ComponentType> = {
+  router: NetworkDevicesIcon,
+  'cloud-gw': ConnectorIcon,
+  firewall: SecurityIcon,
+  switch: NodeIcon,
+  server: HostsIcon,
+  cloud: ConnectorIcon,
+  unknown: DesktopIcon,
 };
 
 /* ── Health bar ── */
@@ -66,7 +97,7 @@ function OverlayPanel({ children }: { children: React.ReactNode }) {
 export const Topology = () => {
   const { demoMode } = useDemoMode();
   const location = useLocation();
-  const { regions, totalEntities, getSitesForRegion, getSiteTopology, getRegion } = useClusterData();
+  const { regions, totalEntities, getSitesForRegion, getDevicesForRegion, getSiteTopology, getRegion } = useClusterData();
 
   /* drill-down state */
   const [level, setLevel] = useState<DrillDownLevel>('country');
@@ -95,6 +126,9 @@ export const Topology = () => {
   const currentSites = useMemo(() => regionId ? getSitesForRegion(regionId) : [], [regionId, getSitesForRegion]);
   const currentSite = useMemo(() => currentSites.find(s => s.id === siteId), [currentSites, siteId]);
 
+  /* devices in the current region (for live-mode drill-down) */
+  const regionDevices = useMemo(() => regionId ? getDevicesForRegion(regionId) : [], [regionId, getDevicesForRegion]);
+
   /* site-level topology (generated on demand) */
   const siteTopology = useMemo(() => {
     if (!currentSite) return null;
@@ -110,8 +144,8 @@ export const Topology = () => {
   }, [level]);
 
   /* breadcrumb parts */
-  const crumbs: Array<{ label: string; action?: () => void }> = [
-    { label: '🌐 All Regions', action: level !== 'country' ? () => { setLevel('country'); setRegionId(null); setSiteId(null); } : undefined },
+  const crumbs: Array<{ label: string; icon?: React.ComponentType; action?: () => void }> = [
+    { label: 'All Regions', icon: WorldmapIcon, action: level !== 'country' ? () => { setLevel('country'); setRegionId(null); setSiteId(null); } : undefined },
   ];
   if (currentRegion) {
     crumbs.push({ label: currentRegion.label, action: level === 'site' ? () => { setLevel('region'); setSiteId(null); } : undefined });
@@ -182,7 +216,10 @@ export const Topology = () => {
         }}
       >
         <Flex alignItems="center" gap={12} style={{ minWidth: 0 }}>
-          <Heading level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>🗺️ Network Topology</Heading>
+          <Flex alignItems="center" gap={8}>
+            <SmartscapeIcon />
+            <Heading level={3} style={{ margin: 0, whiteSpace: 'nowrap' }}>Network Topology</Heading>
+          </Flex>
           <span style={modeBadgeStyle(demoMode)}>
             {demoMode ? 'DEMO' : 'LIVE'}
           </span>
@@ -195,18 +232,23 @@ export const Topology = () => {
 
         {/* Breadcrumb */}
         <Flex alignItems="center" gap={4} style={{ fontSize: 12, minWidth: 0, flexShrink: 1 }}>
-          {crumbs.map((c, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <span style={{ opacity: 0.4, margin: '0 4px' }}>›</span>}
-              {c.action ? (
-                <Link onClick={c.action} style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  {c.label}
-                </Link>
-              ) : (
-                <span style={{ opacity: 0.7, fontWeight: 600, whiteSpace: 'nowrap' }}>{c.label}</span>
-              )}
-            </React.Fragment>
-          ))}
+          {crumbs.map((c, i) => {
+            const CrumbIcon = c.icon;
+            return (
+              <React.Fragment key={i}>
+                {i > 0 && <span style={{ opacity: 0.4, margin: '0 4px' }}>›</span>}
+                {c.action ? (
+                  <Link onClick={c.action} style={{ cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {CrumbIcon && <CrumbIcon />}{c.label}
+                  </Link>
+                ) : (
+                  <span style={{ opacity: 0.7, fontWeight: 600, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {CrumbIcon && <CrumbIcon />}{c.label}
+                  </span>
+                )}
+              </React.Fragment>
+            );
+          })}
         </Flex>
       </div>
 
@@ -291,7 +333,7 @@ export const Topology = () => {
             </div>
           </Flex>
 
-          {/* Site cards grid */}
+          {/* Site cards grid (demo mode) or device cards (live mode) */}
           {currentSites.length > 0 ? (
             <div
               style={{
@@ -302,6 +344,18 @@ export const Topology = () => {
             >
               {currentSites.map((site) => (
                 <SiteCard key={site.id} site={site} onClick={() => drillToSite(site.id)} />
+              ))}
+            </div>
+          ) : regionDevices.length > 0 ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: 16,
+              }}
+            >
+              {regionDevices.map((dev) => (
+                <DeviceCard key={dev.entityId} device={dev} />
               ))}
             </div>
           ) : (
@@ -319,17 +373,17 @@ export const Topology = () => {
               }}
             >
               <Paragraph style={{ fontSize: 14 }}>
-                No site-level data available for this region.
+                No devices found for this region.
               </Paragraph>
               <Paragraph style={{ fontSize: 12, opacity: 0.6 }}>
-                In live mode, sites are discovered automatically from management zones.
+                Device locations are derived from device name prefixes (e.g., LON-Router-01 → London).
               </Paragraph>
             </Flex>
           )}
         </OverlayPanel>
       )}
 
-      {/* ── SITE LEVEL: Device topology + Smartscape overlay ── */}
+      {/* ── SITE LEVEL: Device topology + Generic overlay ── */}
       {level === 'site' && currentSite && siteTopology && (
         <OverlayPanel>
           {/* Site header */}
@@ -353,7 +407,7 @@ export const Topology = () => {
             </Button>
             <Flex flexDirection="column" gap={2} style={{ flex: 1, minWidth: 0 }}>
               <Flex alignItems="center" gap={8}>
-                <span style={{ fontSize: 16 }}>{SITE_ICON[currentSite.siteType] ?? '📍'}</span>
+                {(() => { const SI = SITE_ICON_COMPONENT[currentSite.siteType] ?? DEFAULT_SITE_ICON; return <SI />; })()}
                 <Heading level={4} style={{ margin: 0 }}>{currentSite.label}</Heading>
               </Flex>
               <Paragraph style={{ fontSize: 11, opacity: 0.6 }}>
@@ -375,7 +429,7 @@ export const Topology = () => {
             </div>
           </Flex>
 
-          {/* Tabbed views: Smartscape (HoneycombChart) + Topology Graph */}
+          {/* Tabbed views: Generic (HoneycombChart) + Topology Graph */}
           <div
             style={{
               background: 'rgba(20,20,30,0.85)',
@@ -387,12 +441,12 @@ export const Topology = () => {
             }}
           >
             <Tabs defaultIndex={0}>
-              <Tab title="🔷 Smartscape View">
+              <Tab title="Generic View">
                 <div style={{ padding: 16 }}>
-                  <SmartscapeGrid nodes={siteTopology.nodes} />
+                  <GenericGrid nodes={siteTopology.nodes} />
                 </div>
               </Tab>
-              <Tab title="📊 Topology Graph">
+              <Tab title="Topology Graph">
                 <TopologyMap
                   nodes={siteTopology.nodes}
                   edges={siteTopology.edges}
@@ -407,7 +461,7 @@ export const Topology = () => {
   );
 };
 
-/* ── Smartscape Grid: HoneycombChart showing entity health ── */
+/* ── Generic Grid: HoneycombChart showing entity health ── */
 const HEALTH_VALUE_MAP: Record<string, string> = {
   healthy: 'Healthy',
   warning: 'Warning',
@@ -415,21 +469,23 @@ const HEALTH_VALUE_MAP: Record<string, string> = {
   unknown: 'Unknown',
 };
 
-const ROLE_ICON: Record<string, string> = {
-  router: '⬡',
-  'cloud-gw': '☁',
-  firewall: '🛡',
-  switch: '⬢',
-  server: '🖥',
+const ROLE_LABEL: Record<DeviceRole, string> = {
+  router: 'R',
+  'cloud-gw': 'CG',
+  firewall: 'FW',
+  switch: 'SW',
+  server: 'SV',
+  cloud: 'CL',
+  unknown: '?',
 };
 
-function SmartscapeGrid({ nodes }: { nodes: TopologyNode[] }) {
+function GenericGrid({ nodes }: { nodes: TopologyNode[] }) {
   /* Build categorical data: value = health status, name = device label */
   const honeycombData = useMemo(
     () =>
       nodes.map((n) => ({
         value: HEALTH_VALUE_MAP[n.health] ?? 'Unknown',
-        name: `${ROLE_ICON[n.role] ?? '●'} ${n.label}`,
+        name: `[${ROLE_LABEL[n.role] ?? '?'}] ${n.label}`,
       })),
     [nodes],
   );
@@ -489,7 +545,7 @@ function SiteCard({ site, onClick }: { site: TopologySite; onClick: () => void }
     >
       <Flex justifyContent="space-between" alignItems="flex-start">
         <Flex alignItems="center" gap={8}>
-          <span style={{ fontSize: 18 }}>{SITE_ICON[site.siteType] ?? '📍'}</span>
+          {(() => { const SI = SITE_ICON_COMPONENT[site.siteType] ?? DEFAULT_SITE_ICON; return <SI />; })()}
           <div>
             <div style={{ fontWeight: 700, fontSize: 13 }}>{site.label}</div>
             <div style={{ fontSize: 10, opacity: 0.5, textTransform: 'capitalize' }}>
@@ -517,5 +573,90 @@ function SiteCard({ site, onClick }: { site: TopologySite; onClick: () => void }
         </span>
       </Flex>
     </div>
+  );
+}
+
+/* ── Device Card Component (for live-mode region drill-down) ── */
+const HEALTH_COLOR: Record<string, string> = {
+  healthy: '#2ab06f',
+  warning: '#fd8232',
+  critical: '#dc172a',
+};
+
+const ROLE_DISPLAY: Record<DeviceRole, string> = {
+  router: 'Router',
+  'cloud-gw': 'Cloud Gateway',
+  firewall: 'Firewall',
+  switch: 'Switch',
+  server: 'Server',
+  cloud: 'Cloud',
+  unknown: 'Device',
+};
+
+function DeviceCard({ device }: { device: RegionDevice }) {
+  const borderColor = HEALTH_COLOR[device.health] ?? '#555';
+  const RoleIcon = ROLE_ICON_COMPONENT[device.role] ?? DesktopIcon;
+
+  return (
+    <a
+      href={getDeviceUrl(device.entityId)}
+      target="_blank"
+      rel="noopener"
+      onClick={(e) => { e.preventDefault(); openDeviceDetail(device.entityId); }}
+      style={{
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+        background: 'rgba(20,20,30,0.85)',
+        borderRadius: Borders.Radius.Container.Default,
+        border: `1px solid ${Colors.Border.Neutral.Default}`,
+        borderLeft: `4px solid ${borderColor}`,
+        boxShadow: BoxShadows.Surface.Raised.Rest,
+        backdropFilter: 'blur(6px)',
+        padding: '16px 20px',
+        cursor: 'pointer',
+        transition: 'box-shadow 0.15s ease, transform 0.12s ease',
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLAnchorElement).style.boxShadow = BoxShadows.Surface.Raised.Hover;
+        (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-2px)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLAnchorElement).style.boxShadow = BoxShadows.Surface.Raised.Rest;
+        (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)';
+      }}
+      title={`Open ${device.name} in Infra & Operations`}
+    >
+      <Flex justifyContent="space-between" alignItems="flex-start">
+        <Flex alignItems="center" gap={8}>
+          <RoleIcon />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#73b1ff' }}>
+              {device.name}
+            </div>
+            <div style={{ fontSize: 10, opacity: 0.5 }}>
+              {ROLE_DISPLAY[device.role]}
+            </div>
+          </div>
+        </Flex>
+        <div style={{ textAlign: 'right' }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: borderColor,
+              textTransform: 'uppercase',
+            }}
+          >
+            {device.health}
+          </div>
+          {device.problems > 0 && (
+            <div style={{ fontSize: 10, color: '#dc172a' }}>
+              {device.problems} problem{device.problems !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      </Flex>
+    </a>
   );
 }

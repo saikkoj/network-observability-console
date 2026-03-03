@@ -1,11 +1,20 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Flex } from '@dynatrace/strato-components/layouts';
-import { Paragraph } from '@dynatrace/strato-components/typography';
+import { Paragraph, Heading } from '@dynatrace/strato-components/typography';
 import Colors from '@dynatrace/strato-design-tokens/colors';
 import Borders from '@dynatrace/strato-design-tokens/borders';
 import BoxShadows from '@dynatrace/strato-design-tokens/box-shadows';
+import {
+  NetworkDevicesIcon,
+  ConnectorIcon,
+  SecurityIcon,
+  NodeIcon,
+  HostsIcon,
+  DesktopIcon,
+} from '@dynatrace/strato-icons';
 
-import type { TopologyNode, TopologyEdge, TopologyEdgeType } from '../types/network';
+import type { TopologyNode, TopologyEdge, TopologyEdgeType, DeviceRole } from '../types/network';
 
 /* ── Colour helpers ───────────────────────────────── */
 const HEALTH_COLOR: Record<string, string> = {
@@ -42,11 +51,34 @@ const NODE_SIZE = 36;
 const HIT_PAD = 6;
 const HIT_SIZE = NODE_SIZE + HIT_PAD * 2;
 
+/** Map device role to a Strato icon component */
+const ROLE_ICON_COMPONENT: Record<DeviceRole, React.ComponentType<{ size?: number | string }>> = {
+  router:   NetworkDevicesIcon,
+  'cloud-gw': ConnectorIcon,
+  firewall: SecurityIcon,
+  switch:   NodeIcon,
+  server:   HostsIcon,
+  cloud:    ConnectorIcon,
+  unknown:  DesktopIcon,
+};
+
+/** Map device role to human-readable label */
+const ROLE_LABEL: Record<DeviceRole, string> = {
+  router:   'Router',
+  'cloud-gw': 'Cloud GW',
+  firewall: 'Firewall',
+  switch:   'Switch',
+  server:   'Server',
+  cloud:    'Cloud',
+  unknown:  'Device',
+};
+
 function renderNodeShape(
   node: TopologyNode,
   isHovered: boolean,
   onMouseEnter: () => void,
   onMouseLeave: () => void,
+  onClickNode?: () => void,
 ): React.ReactElement {
   const fill = HEALTH_COLOR[node.health] ?? HEALTH_COLOR.unknown;
   const stroke = isHovered ? '#fff' : `${fill}60`;
@@ -86,75 +118,59 @@ function renderNodeShape(
     transform,
     onMouseEnter,
     onMouseLeave,
-    style: { cursor: 'pointer', transition: 'transform 0.12s ease, opacity 0.15s ease' } as React.CSSProperties,
+    onClick: onClickNode,
+    style: { cursor: onClickNode ? 'pointer' : 'default', transition: 'transform 0.12s ease, opacity 0.15s ease' } as React.CSSProperties,
   };
 
-  switch (node.role) {
-    case 'router':
-    case 'cloud-gw':
-      return (
-        <g {...gProps}>
-          {hitArea}
-          <circle
-            cx={0} cy={0} r={NODE_SIZE / 2}
-            fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            pointerEvents="none"
-          />
-          <text textAnchor="middle" dy={4} fill="#fff" fontSize={16} pointerEvents="none">
-            {node.role === 'cloud-gw' ? '☁' : '⬡'}
-          </text>
-          {label}
-        </g>
-      );
-    case 'firewall':
-      return (
-        <g {...gProps}>
-          {hitArea}
-          <rect
-            x={-NODE_SIZE / 2} y={-NODE_SIZE / 2}
-            width={NODE_SIZE} height={NODE_SIZE} rx={4}
-            fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            pointerEvents="none"
-          />
-          <text textAnchor="middle" dy={4} fill="#fff" fontSize={16} pointerEvents="none">
-            🛡
-          </text>
-          {label}
-        </g>
-      );
-    case 'switch':
-      return (
-        <g {...gProps}>
-          {hitArea}
-          <polygon
-            points={`0,${-NODE_SIZE / 2} ${NODE_SIZE / 2},0 0,${NODE_SIZE / 2} ${-NODE_SIZE / 2},0`}
-            fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            pointerEvents="none"
-          />
-          <text textAnchor="middle" dy={4} fill="#fff" fontSize={14} pointerEvents="none">
-            ⬢
-          </text>
-          {label}
-        </g>
-      );
-    case 'server':
-    default:
-      return (
-        <g {...gProps}>
-          {hitArea}
-          <rect
-            x={-NODE_SIZE / 2} y={-NODE_SIZE / 2}
-            width={NODE_SIZE} height={NODE_SIZE} rx={8}
-            fill={fill} stroke={stroke} strokeWidth={strokeWidth}
-            pointerEvents="none"
-          />
-          <text textAnchor="middle" dy={4} fill="#fff" fontSize={14} pointerEvents="none">
-            🖥
-          </text>
-          {label}
-        </g>
-      );
-  }
+  const IconComponent = ROLE_ICON_COMPONENT[node.role] ?? ROLE_ICON_COMPONENT.unknown;
+  const iconSize = 18;
+
+  // All roles use the same shape: a rounded rect with a Strato icon inside
+  const r = node.role === 'router' || node.role === 'cloud-gw' ? NODE_SIZE / 2 : // circle
+            node.role === 'firewall' ? 4 : // sharp rect
+            8; // rounded rect for switch, server, etc.
+
+  const isCircular = node.role === 'router' || node.role === 'cloud-gw';
+
+  return (
+    <g {...gProps}>
+      {hitArea}
+      {isCircular ? (
+        <circle
+          cx={0} cy={0} r={NODE_SIZE / 2}
+          fill={fill} stroke={stroke} strokeWidth={strokeWidth}
+          pointerEvents="none"
+        />
+      ) : node.role === 'switch' ? (
+        <polygon
+          points={`0,${-NODE_SIZE / 2} ${NODE_SIZE / 2},0 0,${NODE_SIZE / 2} ${-NODE_SIZE / 2},0`}
+          fill={fill} stroke={stroke} strokeWidth={strokeWidth}
+          pointerEvents="none"
+        />
+      ) : (
+        <rect
+          x={-NODE_SIZE / 2} y={-NODE_SIZE / 2}
+          width={NODE_SIZE} height={NODE_SIZE} rx={r}
+          fill={fill} stroke={stroke} strokeWidth={strokeWidth}
+          pointerEvents="none"
+        />
+      )}
+      <foreignObject
+        x={-iconSize / 2} y={-iconSize / 2}
+        width={iconSize} height={iconSize}
+        pointerEvents="none"
+      >
+        <div
+          /* `xmlns` keeps React happy inside foreignObject */
+          {...{ xmlns: 'http://www.w3.org/1999/xhtml' } as any}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: iconSize, height: iconSize, color: '#fff' }}
+        >
+          <IconComponent size={iconSize} />
+        </div>
+      </foreignObject>
+      {label}
+    </g>
+  );
 }
 
 /* ── Tooltip (viewport-clamped, fixed position) ──── */
@@ -223,26 +239,40 @@ interface TopologyMapProps {
   mini?: boolean;
   isLoading?: boolean;
   error?: string | null;
+  onNodeClick?: (node: TopologyNode) => void;
 }
 
-export const TopologyMap = ({ nodes, edges, edgeCounts, height = 500, mini = false, isLoading = false, error = null }: TopologyMapProps) => {
+export const TopologyMap = ({ nodes, edges, edgeCounts, height = 500, mini = false, isLoading = false, error = null, onNodeClick }: TopologyMapProps) => {
 
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
 
+  /* ── Split connected vs orphan devices ── */
+  const connectedNodeIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const e of edges) {
+      ids.add(e.source);
+      ids.add(e.target);
+    }
+    return ids;
+  }, [edges]);
+
+  const connectedNodes = useMemo(() => nodes.filter(n => connectedNodeIds.has(n.id)), [nodes, connectedNodeIds]);
+  const orphanNodes = useMemo(() => nodes.filter(n => !connectedNodeIds.has(n.id)), [nodes, connectedNodeIds]);
+
   // Compute SVG viewBox to fit all nodes with padding
   const viewBox = useMemo(() => {
-    if (nodes.length === 0) return '0 0 800 500';
+    if (connectedNodes.length === 0) return '0 0 800 500';
     const pad = 40;
-    const xs = nodes.map(n => n.x);
-    const ys = nodes.map(n => n.y);
+    const xs = connectedNodes.map(n => n.x);
+    const ys = connectedNodes.map(n => n.y);
     const minX = Math.min(...xs) - pad;
     const minY = Math.min(...ys) - pad;
     const maxX = Math.max(...xs) + pad;
     const maxY = Math.max(...ys) + pad;
     return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
-  }, [nodes]);
+  }, [connectedNodes]);
 
   const nodeById = useMemo(() => {
     const map: Record<string, TopologyNode> = {};
@@ -280,127 +310,208 @@ export const TopologyMap = ({ nodes, edges, edgeCounts, height = 500, mini = fal
     );
   }
 
+  /** Height for the connected-devices graph (shrink if we need room for orphans below) */
+  const graphHeight = orphanNodes.length > 0 && !mini ? Math.max(height - 140, 300) : height;
+
   return (
     <>
-    <div
-      style={{
-        position: 'relative',
-        background: Colors.Background.Surface.Default,
-        borderRadius: mini ? 8 : Borders.Radius.Container.Default,
-        border: `1px solid ${Colors.Border.Neutral.Default}`,
-        boxShadow: mini ? 'none' : BoxShadows.Surface.Raised.Rest,
-        overflow: 'hidden',
-        height,
-      }}
-      onMouseMove={handleNodeMouseMove}
-    >
-      {/* Legend (full mode only) */}
-      {!mini && (
+    {/* ── Section 1: Devices with relationships ── */}
+    {connectedNodes.length > 0 ? (
+      <>
+        {!mini && (
+          <Flex alignItems="center" gap={8} style={{ padding: '8px 0 6px' }}>
+            <Heading level={6} style={{ margin: 0, fontSize: 11, opacity: 0.5, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+              Devices with relationships ({connectedNodes.length})
+            </Heading>
+            <div style={{ flex: 1, height: 1, background: Colors.Border.Neutral.Default }} />
+          </Flex>
+        )}
         <div
           style={{
-            position: 'absolute', top: 12, left: 16, zIndex: 10,
-            background: 'rgba(15,17,22,0.85)', borderRadius: 8,
-            padding: '8px 12px', fontSize: 10, lineHeight: 1.8,
-            border: '1px solid rgba(255,255,255,0.06)',
+            position: 'relative',
+            background: Colors.Background.Surface.Default,
+            borderRadius: mini ? 8 : Borders.Radius.Container.Default,
+            border: `1px solid ${Colors.Border.Neutral.Default}`,
+            boxShadow: mini ? 'none' : BoxShadows.Surface.Raised.Rest,
+            overflow: 'hidden',
+            height: graphHeight,
+          }}
+          onMouseMove={handleNodeMouseMove}
+        >
+          {/* Legend (full mode only) */}
+          {!mini && (
+            <div
+              style={{
+                position: 'absolute', top: 12, left: 16, zIndex: 10,
+                background: 'rgba(15,17,22,0.85)', borderRadius: 8,
+                padding: '8px 12px', fontSize: 10, lineHeight: 1.8,
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 2 }}>Node Health</div>
+              {Object.entries(HEALTH_COLOR).map(([key, col]) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: col }} />
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </div>
+              ))}
+              <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0' }} />
+              {(['router', 'cloud-gw', 'switch', 'firewall', 'server'] as DeviceRole[]).map((role) => {
+                const RIcon = ROLE_ICON_COMPONENT[role];
+                return (
+                  <div key={role} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ display: 'inline-flex', width: 14, height: 14, color: 'rgba(255,255,255,0.85)' }}><RIcon /></span>
+                    {ROLE_LABEL[role]}
+                  </div>
+                );
+              })}
+
+              {/* Edge type legend — only show types that have edges */}
+              {edgeCounts && Object.values(edgeCounts).some(c => c > 0) && (
+                <>
+                  <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0' }} />
+                  <div style={{ fontWeight: 700, marginBottom: 2 }}>Link Source</div>
+                  {(Object.entries(EDGE_TYPE_META) as [TopologyEdgeType, typeof EDGE_TYPE_META[TopologyEdgeType]][])
+                    .filter(([type]) => (edgeCounts[type] ?? 0) > 0)
+                    .map(([type, meta]) => (
+                      <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <svg width={24} height={6}>
+                          <line
+                            x1={0} y1={3} x2={24} y2={3}
+                            stroke={meta.color ?? '#2ab06f'}
+                            strokeWidth={2}
+                            strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
+                          />
+                        </svg>
+                        {meta.label} ({edgeCounts[type]})
+                      </div>
+                    ))}
+                </>
+              )}
+            </div>
+          )}
+
+          <svg
+            ref={svgRef}
+            width="100%"
+            height="100%"
+            viewBox={viewBox}
+            style={{ display: 'block' }}
+          >
+            {/* Edges */}
+            {edges.map((edge) => {
+              const src = nodeById[edge.source];
+              const tgt = nodeById[edge.target];
+              if (!src || !tgt) return null;
+              const eType = edge.edgeType ?? 'lldp';
+              const meta = EDGE_TYPE_META[eType];
+              const col = eType === 'lldp' ? edgeColor(edge.utilization) : (meta.color ?? edgeColor(edge.utilization));
+              const w = eType === 'lldp' ? edgeWidth(edge.utilization) : 1.5;
+              const isConnectedToHover =
+                hoveredNode && (edge.source === hoveredNode || edge.target === hoveredNode);
+              return (
+                <line
+                  key={edge.id ?? `${edge.source}-${edge.target}-${eType}`}
+                  x1={src.x}
+                  y1={src.y}
+                  x2={tgt.x}
+                  y2={tgt.y}
+                  stroke={col}
+                  strokeWidth={isConnectedToHover ? w + 1.5 : w}
+                  strokeOpacity={hoveredNode ? (isConnectedToHover ? 1 : 0.25) : 0.7}
+                  strokeLinecap="round"
+                  strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
+                  style={{ transition: 'stroke-width 0.15s ease, stroke-opacity 0.15s ease' }}
+                />
+              );
+            })}
+
+            {/* Connected nodes only */}
+            {connectedNodes.map((node) =>
+              renderNodeShape(
+                node,
+                hoveredNode === node.id,
+                () => setHoveredNode(node.id),
+                () => setHoveredNode(null),
+                onNodeClick ? () => onNodeClick(node) : undefined,
+              )
+            )}
+          </svg>
+        </div>
+      </>
+    ) : (
+      !mini && (
+        <Flex alignItems="center" justifyContent="center" style={{ height: 120, opacity: 0.5 }}>
+          <Paragraph>No relationship data discovered between devices.</Paragraph>
+        </Flex>
+      )
+    )}
+
+    {/* ── Section 2: Devices without relationships (orphan grid) ── */}
+    {!mini && orphanNodes.length > 0 && (
+      <>
+        <Flex alignItems="center" gap={8} style={{ padding: '12px 0 6px' }}>
+          <Heading level={6} style={{ margin: 0, fontSize: 11, opacity: 0.5, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            Devices without relationships ({orphanNodes.length})
+          </Heading>
+          <div style={{ flex: 1, height: 1, background: Colors.Border.Neutral.Default }} />
+        </Flex>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gap: 8,
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>Node Health</div>
-          {Object.entries(HEALTH_COLOR).map(([key, col]) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: col }} />
-              {key.charAt(0).toUpperCase() + key.slice(1)}
-            </div>
-          ))}
-          <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>⬡</span> Router / Cloud GW
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>⬢</span> Switch
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>🛡</span> Firewall
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>🖥</span> Server
-          </div>
-
-          {/* Edge type legend — only show types that have edges */}
-          {edgeCounts && Object.values(edgeCounts).some(c => c > 0) && (
-            <>
-              <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '4px 0' }} />
-              <div style={{ fontWeight: 700, marginBottom: 2 }}>Link Source</div>
-              {(Object.entries(EDGE_TYPE_META) as [TopologyEdgeType, typeof EDGE_TYPE_META[TopologyEdgeType]][])
-                .filter(([type]) => (edgeCounts[type] ?? 0) > 0)
-                .map(([type, meta]) => (
-                  <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width={24} height={6}>
-                      <line
-                        x1={0} y1={3} x2={24} y2={3}
-                        stroke={meta.color ?? '#2ab06f'}
-                        strokeWidth={2}
-                        strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
-                      />
-                    </svg>
-                    {meta.label} ({edgeCounts[type]})
+          {orphanNodes.map((node) => {
+            const fill = HEALTH_COLOR[node.health] ?? HEALTH_COLOR.unknown;
+            const IconComp = ROLE_ICON_COMPONENT[node.role] ?? ROLE_ICON_COMPONENT.unknown;
+            const isHovered = hoveredNode === node.id;
+            return (
+              <div
+                key={node.id}
+                onMouseEnter={(e) => {
+                  setHoveredNode(node.id);
+                  setTooltipPos({ x: e.clientX, y: e.clientY });
+                }}
+                onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setHoveredNode(null)}
+                onClick={onNodeClick ? () => onNodeClick(node) : undefined}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  background: isHovered ? 'rgba(255,255,255,0.06)' : Colors.Background.Surface.Default,
+                  border: `1px solid ${isHovered ? fill : Colors.Border.Neutral.Default}`,
+                  borderLeft: `3px solid ${fill}`,
+                  borderRadius: Borders.Radius.Container.Default,
+                  cursor: onNodeClick ? 'pointer' : 'default',
+                  transition: 'border-color 0.15s ease, background 0.15s ease',
+                }}
+              >
+                <span style={{ display: 'inline-flex', color: fill, flexShrink: 0 }}>
+                  <IconComp />
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {node.label}
                   </div>
-                ))}
-            </>
-          )}
+                  <div style={{ fontSize: 10, opacity: 0.5 }}>
+                    {ROLE_LABEL[node.role]}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </>
+    )}
 
-      <svg
-        ref={svgRef}
-        width="100%"
-        height="100%"
-        viewBox={viewBox}
-        style={{ display: 'block' }}
-      >
-        {/* Edges */}
-        {edges.map((edge) => {
-          const src = nodeById[edge.source];
-          const tgt = nodeById[edge.target];
-          if (!src || !tgt) return null;
-          const eType = edge.edgeType ?? 'lldp';
-          const meta = EDGE_TYPE_META[eType];
-          // LLDP edges use utilization-based colour; others use their fixed colour
-          const col = eType === 'lldp' ? edgeColor(edge.utilization) : (meta.color ?? edgeColor(edge.utilization));
-          const w = eType === 'lldp' ? edgeWidth(edge.utilization) : 1.5;
-          const isConnectedToHover =
-            hoveredNode && (edge.source === hoveredNode || edge.target === hoveredNode);
-          return (
-            <line
-              key={edge.id ?? `${edge.source}-${edge.target}-${eType}`}
-              x1={src.x}
-              y1={src.y}
-              x2={tgt.x}
-              y2={tgt.y}
-              stroke={col}
-              strokeWidth={isConnectedToHover ? w + 1.5 : w}
-              strokeOpacity={hoveredNode ? (isConnectedToHover ? 1 : 0.25) : 0.7}
-              strokeLinecap="round"
-              strokeDasharray={meta.dashArray === 'none' ? undefined : meta.dashArray}
-              style={{ transition: 'stroke-width 0.15s ease, stroke-opacity 0.15s ease' }}
-            />
-          );
-        })}
-
-        {/* Nodes */}
-        {nodes.map((node) =>
-          renderNodeShape(
-            node,
-            hoveredNode === node.id,
-            () => setHoveredNode(node.id),
-            () => setHoveredNode(null),
-          )
-        )}
-      </svg>
-    </div>
-
-    {/* Tooltip rendered outside the overflow:hidden container */}
-    {!mini && hoveredNodeData && (
-      <Tooltip node={hoveredNodeData} x={tooltipPos.x} y={tooltipPos.y} />
+    {/* Tooltip — rendered via portal so it always appears in front of everything */}
+    {!mini && hoveredNodeData && createPortal(
+      <Tooltip node={hoveredNodeData} x={tooltipPos.x} y={tooltipPos.y} />,
+      document.body,
     )}
     </>
   );

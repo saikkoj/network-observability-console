@@ -4,7 +4,7 @@ import { useDemoMode } from './useDemoMode';
 import { NETWORK_QUERIES } from '../data/networkCategories';
 import { DEMO_TOPOLOGY_NODES, DEMO_TOPOLOGY_EDGES } from '../data/demoData';
 import type { TopologyNode, TopologyEdge, DeviceRole, TopologyEdgeType } from '../types/network';
-import { toNum } from '../utils';
+import { toNum, mapLocationToCity } from '../utils';
 
 /* ── Map Dynatrace entity tags / name → canonical DeviceRole ── */
 function mapDeviceRole(raw: unknown): DeviceRole {
@@ -255,6 +255,7 @@ export function useTopologyData(
         type: Array.isArray(r.deviceType) ? r.deviceType.join(', ') : String(r.deviceType ?? ''),
         cpu: toNum(r.cpuPct),
         memory: toNum(r.memPct),
+        location: mapLocationToCity(label) || undefined,
       };
     });
 

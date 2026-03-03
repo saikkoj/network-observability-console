@@ -10,7 +10,7 @@ import type { NetworkCategory } from '../types/network';
 import { useDemoMode } from '../hooks/useDemoMode';
 import { DEMO_KPI, DEMO_SECONDARY_KPI } from '../data/demoData';
 import { useDql } from '@dynatrace-sdk/react-hooks';
-import { computeSeverity, toNum, SEV_COLORS } from '../utils';
+import { computeSeverity, toNum, SEV_COLORS, getIconComponent } from '../utils';
 
 /* ── Single mini card ──────────────────────────────── */
 const KpiMiniCard = ({ category }: { category: NetworkCategory }) => {
@@ -68,7 +68,7 @@ const KpiMiniCard = ({ category }: { category: NetworkCategory }) => {
         }}
       >
         <Flex alignItems="center" gap={6}>
-          <span style={{ fontSize: 16 }}>{category.icon}</span>
+          {(() => { const I = getIconComponent(category.icon); return I ? <I /> : null; })()}
           <Paragraph style={{ fontSize: 11, fontWeight: 600, opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {category.title}
           </Paragraph>
