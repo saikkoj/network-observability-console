@@ -98,10 +98,11 @@ const mapCategory = (cat: string): DemoAlert['category'] => {
 
 const LIVE_ALERTS_QUERY = [
   `fetch dt.davis.problems`,
+  `| fieldsAdd problem_event_id = event.id`,
   `| expand affected_entity_ids`,
   `| filter startsWith(affected_entity_ids, "CUSTOM_DEVICE")`,
   `| dedup display_id`,
-  `| fields display_id, event.name, event.category, event.status, timestamp, affected_entity_ids`,
+  `| fields display_id, problem_event_id, event.name, event.category, event.status, timestamp, affected_entity_ids`,
   `| sort timestamp desc`,
   `| limit 50`,
 ].join('\n');
@@ -132,6 +133,7 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
       const eventStatus = String(r['event.status'] ?? 'ACTIVE');
       const entityId = String(r['affected_entity_ids'] ?? '');
       const displayId = String(r['display_id'] ?? '');
+      const eventId = String(r['problem_event_id'] ?? r['event.id'] ?? '');
       return {
         id: displayId,
         title: String(r['event.name'] ?? displayId ?? 'Unknown'),
@@ -140,6 +142,7 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
         entity: entityId,
         entityId,
         problemId: displayId,
+        problemEventId: eventId,
         startedAt: startDate,
         status: (eventStatus === 'CLOSED' ? 'CLOSED' : 'ACTIVE') as DemoAlert['status'],
         durationMins,
@@ -225,15 +228,16 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
       id: 'problemId',
       header: 'Problem',
       accessor: 'problemId',
-      cell: ({ value }: { value?: string }) => {
+      cell: ({ value, rowData }: { value?: string; rowData: DemoAlert }) => {
         if (!value) return <span style={{ opacity: 0.35 }}>—</span>;
+        const eventId = rowData?.problemEventId || value;
         return (
           <a
-            href={getProblemUrl(value)}
+            href={getProblemUrl(eventId)}
             target="_blank"
             rel="noopener"
             style={entityLinkStyle}
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); openProblemDetail(value); }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); e.preventDefault(); openProblemDetail(eventId); }}
             title={`Open problem ${value} in Dynatrace`}
           >
             <Flex alignItems="center" gap={4}>

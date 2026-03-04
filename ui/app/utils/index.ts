@@ -1,5 +1,5 @@
 import type { ThresholdRule } from '../types/network';
-import { sendIntent } from '@dynatrace-sdk/navigation';
+import { sendIntent, getAppLink } from '@dynatrace-sdk/navigation';
 import {
   AiIcon,
   DocumentIcon,
@@ -161,16 +161,40 @@ export function openQueryIntent(query: string): void {
 
 /* ── Deep-link helpers ── */
 
-/** Resolve the environment base URL (the outer Dynatrace shell origin). */
+/**
+ * Build a full URL to another Dynatrace app.
+ *
+ * Uses the SDK's getAppLink() to get the shell-resolved base for a known app,
+ * then derives the environment origin from that.
+ *
+ * getAppLink('dynatrace.infraops') returns something like:
+ *   /ui/openApp/dynatrace.infraops     — or —
+ *   https://acc27517.dev.apps.dynatracelabs.com/ui/apps/dynatrace.infraops
+ *
+ * We only need the origin portion, then build the correct /ui/apps/... path.
+ */
 function getEnvOrigin(): string {
   try {
-    const top = window.top?.location?.origin;
-    if (top) return top;
-  } catch { /* cross-origin */ }
+    // getAppLink returns the shell-resolved URL for any app
+    const link = getAppLink('dynatrace.infraops');
+    // If it's a full URL, extract origin
+    if (link.startsWith('http')) {
+      const url = new URL(link);
+      return url.origin;
+    }
+  } catch { /* */ }
+
+  // Fallback: strip our app path from the current page URL
+  const href = window.location.href;
+  const appMarker = '/ui/apps/my.network.observability.console';
+  const idx = href.indexOf(appMarker);
+  if (idx !== -1) return href.substring(0, idx);
+
+  // Last resort: use current origin
   return window.location.origin;
 }
 
-/** Build an absolute URL to the InfraOps device Health page. */
+/** Build a full absolute URL to the InfraOps device Health page. */
 export function getDeviceUrl(entityId: string): string {
   return `${getEnvOrigin()}/ui/apps/dynatrace.infraops/explorer/Network%20devices?perspective=Health&fullPageId=${encodeURIComponent(entityId)}`;
 }
@@ -180,7 +204,7 @@ export function openDeviceDetail(entityId: string): void {
   try { window.open(getDeviceUrl(entityId), '_blank', 'noopener'); } catch { /* */ }
 }
 
-/** Build an absolute URL to the Davis Problems detail page. */
+/** Build a full absolute URL to the Davis Problems detail page. */
 export function getProblemUrl(problemId: string): string {
   return `${getEnvOrigin()}/ui/apps/dynatrace.davis.problems/problem/${encodeURIComponent(problemId)}?from=now%28%29-2h&to=now%28%29`;
 }

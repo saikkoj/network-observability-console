@@ -223,8 +223,10 @@ export interface DemoAlert {
   entity: string;
   /** Dynatrace entity ID for navigation (e.g. CUSTOM_DEVICE-xxx) */
   entityId?: string;
-  /** Problem display_id for linking to Dynatrace problems */
+  /** Problem display_id for display (e.g. P-26036) */
   problemId?: string;
+  /** Problem event.id for deep-link URL (e.g. 8136182917198272374_1772578980631V2) */
+  problemEventId?: string;
   startedAt: Date;
   status: 'ACTIVE' | 'CLOSED';
   durationMins: number;
