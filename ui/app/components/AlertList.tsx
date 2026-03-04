@@ -102,7 +102,8 @@ const LIVE_ALERTS_QUERY = [
   `| expand affected_entity_ids`,
   `| filter startsWith(affected_entity_ids, "CUSTOM_DEVICE")`,
   `| dedup display_id`,
-  `| fields display_id, problem_event_id, event.name, event.category, event.status, timestamp, affected_entity_ids`,
+  `| fieldsAdd entity_name = entityName(affected_entity_ids)`,
+  `| fields display_id, problem_event_id, event.name, event.category, event.status, timestamp, affected_entity_ids, entity_name`,
   `| sort timestamp desc`,
   `| limit 50`,
 ].join('\n');
@@ -132,6 +133,7 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
       const eventCat = String(r['event.category'] ?? '');
       const eventStatus = String(r['event.status'] ?? 'ACTIVE');
       const entityId = String(r['affected_entity_ids'] ?? '');
+      const entityName = String(r['entity_name'] ?? '');
       const displayId = String(r['display_id'] ?? '');
       const eventId = String(r['problem_event_id'] ?? r['event.id'] ?? '');
       return {
@@ -139,7 +141,7 @@ export const AlertList = ({ liveAlerts }: AlertListProps) => {
         title: String(r['event.name'] ?? displayId ?? 'Unknown'),
         severity: mapSeverity(eventCat),
         category: mapCategory(eventCat),
-        entity: entityId,
+        entity: entityName || entityId,
         entityId,
         problemId: displayId,
         problemEventId: eventId,

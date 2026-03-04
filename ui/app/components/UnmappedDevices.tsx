@@ -179,6 +179,7 @@ export const UnmappedDevices = ({ height = 400 }: UnmappedDevicesProps) => {
             data={rows}
             columns={columns as any}
             sortable
+            resizable
             fullWidth
             variant={{ verticalDividers: true }}
           >
